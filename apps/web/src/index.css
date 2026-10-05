@@ -1,0 +1,68 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+  --muted: #888;
+  --danger: #c62828;
+}
+
+body {
+  margin: 0;
+}
+
+.app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+.capture {
+  display: flex;
+  gap: 8px;
+}
+
+.capture input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px;
+  font-size: 1rem;
+}
+
+.error {
+  color: var(--danger);
+}
+
+.tasks {
+  list-style: none;
+  padding: 0;
+}
+
+.task {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 15%, transparent);
+}
+
+.task__title {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.task__status {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.task--done .task__title,
+.task--canceled .task__title {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.task__actions {
+  display: flex;
+  gap: 4px;
+}
