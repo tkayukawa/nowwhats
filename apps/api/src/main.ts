@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { serve } from "@hono/node-server";
 import {
   InMemoryProcessedChangeStore,
@@ -12,6 +13,8 @@ const app = createApp({
   repository,
   changeFeed: repository,
   processedChanges: new InMemoryProcessedChangeStore(),
+  // メモリ実装は再起動でデータが消えるため、起動ごとに epoch を変えてクライアントに取り込み直させる
+  changeLogEpoch: randomUUID(),
   clock: { now: () => new Date() },
   resolveOwner: createDevOwnerResolver(),
 });

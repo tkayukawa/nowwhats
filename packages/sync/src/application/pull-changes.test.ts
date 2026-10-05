@@ -24,7 +24,10 @@ const feedOf = (all: TaskChange[]) => ({
 
 describe("PullChanges", () => {
   it("cursor より後の変更を limit 件まで返し、続きの有無と次の cursor を返す", async () => {
-    const useCase = new PullChanges({ feed: feedOf([change(1), change(2), change(3)]) });
+    const useCase = new PullChanges({
+      feed: feedOf([change(1), change(2), change(3)]),
+      epoch: "e-1",
+    });
 
     const first = await useCase.execute({ ownerId: owner, cursor: 0, limit: 2 });
     expect(first).toMatchObject({ cursor: 2, hasMore: true });
@@ -35,10 +38,10 @@ describe("PullChanges", () => {
   });
 
   it("新しい変更がなければ cursor はそのまま", async () => {
-    const useCase = new PullChanges({ feed: feedOf([change(1)]) });
+    const useCase = new PullChanges({ feed: feedOf([change(1)]), epoch: "e-1" });
 
     const result = await useCase.execute({ ownerId: owner, cursor: 1, limit: 10 });
 
-    expect(result).toEqual({ changes: [], cursor: 1, hasMore: false });
+    expect(result).toEqual({ epoch: "e-1", changes: [], cursor: 1, hasMore: false });
   });
 });

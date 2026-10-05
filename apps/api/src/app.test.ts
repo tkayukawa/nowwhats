@@ -14,6 +14,7 @@ const setup = (owner: OwnerId | null = OwnerId.of("u-1")) => {
     repository,
     changeFeed: repository,
     processedChanges: new InMemoryProcessedChangeStore(),
+    changeLogEpoch: "epoch-1",
     clock: { now: () => new Date("2026-10-05T00:00:00Z") },
     resolveOwner: () => Promise.resolve(owner),
   });
@@ -99,6 +100,7 @@ describe("API", () => {
 
     const pulled = await app.request("/api/sync/pull?cursor=0");
     expect(await pulled.json()).toMatchObject({
+      epoch: "epoch-1",
       changes: [{ seq: 1, task: { id: ID, status: "todo" } }],
       cursor: 1,
       hasMore: false,

@@ -226,6 +226,15 @@ importers:
       '@nowwhats/api':
         specifier: workspace:*
         version: link:../api
+      '@nowwhats/infrastructure-client':
+        specifier: workspace:*
+        version: link:../../packages/infrastructure-client
+      '@nowwhats/shared-kernel':
+        specifier: workspace:*
+        version: link:../../packages/shared-kernel
+      '@nowwhats/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
       '@nowwhats/task-management':
         specifier: workspace:*
         version: link:../../packages/task-management
@@ -251,6 +260,25 @@ importers:
       vite:
         specifier: 8.3.1
         version: 8.3.1(@types/node@24.19.0)
+
+  packages/infrastructure-client:
+    dependencies:
+      '@nowwhats/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
+      '@nowwhats/sync':
+        specifier: workspace:*
+        version: link:../sync
+      '@nowwhats/task-management':
+        specifier: workspace:*
+        version: link:../task-management
+      '@sqlite.org/sqlite-wasm':
+        specifier: 3.53.4-build1
+        version: 3.53.4-build1
+    devDependencies:
+      '@nowwhats/infrastructure-server':
+        specifier: workspace:*
+        version: link:../infrastructure-server
 
   packages/infrastructure-server:
     dependencies:
@@ -480,6 +508,10 @@ packages:
 
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
+
+  '@sqlite.org/sqlite-wasm@3.53.4-build1':
+    resolution: {integrity: sha512-U8pvL0patYHMgieD8JxxYJTlh9m1LUX8+BDYb7MiKQzBI89f2qbdmdcG/PvnPaLm9wsBbv4VlVG453ixnxBOnA==}
+    engines: {node: '>=22'}
 
   '@turbo/darwin-64@2.11.5':
     resolution: {integrity: sha512-KdY4y7BBjIisl+jAkb3FFaRjClGqHyaeHCcVcCT8LBzFFwUu6thgfxyRZAx0uL4KoxLmH+iOan8UhVf/aDDcaA==}
@@ -1451,6 +1483,8 @@ snapshots:
     optional: true
 
   '@rolldown/pluginutils@1.0.1': {}
+
+  '@sqlite.org/sqlite-wasm@3.53.4-build1': {}
 
   '@turbo/darwin-64@2.11.5':
     optional: true

@@ -1,29 +1,23 @@
 {
-  "name": "@nowwhats/web",
+  "name": "@nowwhats/infrastructure-client",
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
     "typecheck": "tsc -p tsconfig.json",
     "lint": "eslint src",
     "test": "vitest run"
   },
   "dependencies": {
-    "@nowwhats/api": "workspace:*",
-    "@nowwhats/infrastructure-client": "workspace:*",
     "@nowwhats/shared-kernel": "workspace:*",
     "@nowwhats/sync": "workspace:*",
     "@nowwhats/task-management": "workspace:*",
-    "hono": "4.13.10",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "@sqlite.org/sqlite-wasm": "3.53.4-build1"
   },
   "devDependencies": {
-    "@types/react": "19.3.0",
-    "@types/react-dom": "19.3.0",
-    "@vitejs/plugin-react": "6.1.1",
-    "vite": "8.3.1"
+    "@nowwhats/infrastructure-server": "workspace:*"
   }
 }

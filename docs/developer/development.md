@@ -22,9 +22,12 @@ pnpm run dev
 
 - `apps/api`（http://127.0.0.1:8787）と `apps/web`（Vite の開発サーバー。URL は起動ログに表示）が同時に起動する。
 - Web からの `/api` へのリクエストは Vite の proxy で API サーバーへ中継される。
-- 現時点の制約（ステップ 3）:
-  - データはメモリ上に保存するため、API サーバーを再起動すると消える。
+- Web はタスクをブラウザ内の SQLite（OPFS）に保存し、オフラインでも登録・状態変更ができる。オンライン時に自動で同期する（起動時・オンライン復帰時・操作の直後・30 秒ごと）。
+- 現時点の制約:
+  - API サーバーのデータはメモリ上に保存するため、再起動すると消える。再起動するとクライアントは epoch の変化を検知し、サーバーの状態（空）に合わせてローカルのタスクも消える（ADR 0006）。
   - 認証は未実装で、全リクエストを開発用の固定利用者（`dev-user`）として扱う。`NODE_ENV=production` では API が起動しない。外部に公開しないこと。
+  - オフライン中に画面を再読み込みすると、画面自体が開けない（ステップ 4-3 の Service Worker で対応予定）。
+- ローカル DB を消すには、ブラウザの開発者ツールでサイトのデータ（ストレージ）を削除する。
 
 ## コマンド
 
@@ -53,10 +56,26 @@ packages/
     src/index.ts       # 公開 API（他パッケージはここからのみ import する）
   sync/                # 同期の取り決め（操作・結果の型）とユースケース（ADR 0006）
   infrastructure-server/ # サーバー用 Adapter（現時点はメモリ上の Repository・変更ログ・処理済み記録）
+  infrastructure-client/ # クライアント用 Adapter（SQLite のローカル保存・マイグレーション・UUIDv7）
 apps/
   api/                 # Hono による HTTP API。src/main.ts が Composition Root
   web/                 # Vite + React の Web クライアント
+    src/local/         # ローカル DB と同期を動かす Web Worker と、その呼び出し
 ```
+
+### クライアント（Web）の構成
+
+```
+メインスレッド（React）  ──postMessage──▶  Web Worker（src/local/db-worker.ts）
+  useLocalTasks                              ExecuteLocalCommand / SynchronizeWithServer（packages/sync）
+                                             SqliteLocalStore（packages/infrastructure-client）
+                                             sqlite-wasm + OPFS（SAH プール方式）
+```
+
+- ローカル DB と同期処理は Web Worker で動かす。OPFS の SAH プール方式は Worker 専用のため。トランザクションは `SqliteLocalStore` が 1 本の列に並べて順番に実行する。
+- ローカル DB のスキーマは `packages/infrastructure-client/src/migrations.ts` で管理する。既存のマイグレーションは変更せず、末尾に追加する。
+- SQL の実行は `SqlDatabase` インターフェース経由にしている。将来 expo-sqlite（モバイル）や Tauri（デスクトップ）の Adapter を用意すれば、同じ Repository を使い回せる。
+- OPFS が使えない環境ではメモリ DB にフォールバックし、画面に警告を表示する。
 
 - 内部パッケージはビルドせず、`exports` で `src/index.ts` を直接公開する。型チェックは `tsc --noEmit`、実行時の変換は Vitest や各アプリのバンドラーが行う。
 - `apps/api` は Node.js 標準の TypeScript 実行（型注釈の除去）でそのまま動かす。そのため `erasableSyntaxOnly` を有効にしており、コンストラクタ引数プロパティ（`constructor(private x)`）・`enum`・`namespace` などは使えない。

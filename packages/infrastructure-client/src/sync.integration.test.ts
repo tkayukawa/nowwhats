@@ -1,0 +1,165 @@
+import {
+  InMemoryProcessedChangeStore,
+  InMemoryTaskRepository,
+} from "@nowwhats/infrastructure-server";
+import { OwnerId } from "@nowwhats/shared-kernel";
+import {
+  ApplyPushedChanges,
+  ExecuteLocalCommand,
+  PullChanges,
+  SynchronizeWithServer,
+  type SyncApi,
+  type TaskCommand,
+} from "@nowwhats/sync";
+import { ChangeTaskStatus, CreateTask, ListTasks } from "@nowwhats/task-management";
+import { describe, expect, it } from "vitest";
+import { SqliteLocalStore } from "./sqlite-local-store.ts";
+import { createTestDatabase } from "./test-support.ts";
+import { uuidv7 } from "./uuidv7.ts";
+
+const clock = { now: () => new Date("2026-10-05T00:00:00Z") };
+
+/** サーバー（メモリ実装）と、それに接続する SyncApi を作る。online=false で通信失敗を再現する */
+const createServer = (epoch = "epoch-1") => {
+  const repository = new InMemoryTaskRepository();
+  const owner = OwnerId.of("dev-user");
+  const push = new ApplyPushedChanges({
+    createTask: new CreateTask({ repository, clock }),
+    changeTaskStatus: new ChangeTaskStatus({ repository, clock }),
+    processedChanges: new InMemoryProcessedChangeStore(),
+  });
+  const pull = new PullChanges({ feed: repository, epoch });
+  const connect = (network: { online: boolean }): SyncApi => ({
+    push: (changes) => {
+      if (!network.online) return Promise.reject(new Error("offline"));
+      return push.execute({ ownerId: owner, changes });
+    },
+    pull: (cursor) => {
+      if (!network.online) return Promise.reject(new Error("offline"));
+      return pull.execute({ ownerId: owner, cursor, limit: 2 }); // ページ送りも確認するため小さくする
+    },
+  });
+  return { connect };
+};
+
+/** クライアント 1 台分（ローカル DB + 操作実行 + 同期）。connectTo で接続先のサーバーを差し替えられる */
+const createClient = async (server: ReturnType<typeof createServer>) => {
+  const store = new SqliteLocalStore(await createTestDatabase());
+  const context = { ownerId: OwnerId.of("local"), clock };
+  const network = { online: true };
+  const exec = new ExecuteLocalCommand({ store, context, newChangeId: uuidv7 });
+  let sync = new SynchronizeWithServer({ store, api: server.connect(network), context });
+  return {
+    network,
+    connectTo: (next: ReturnType<typeof createServer>) => {
+      sync = new SynchronizeWithServer({ store, api: next.connect(network), context });
+    },
+    run: (command: TaskCommand) => exec.execute(command),
+    sync: () => sync.execute(),
+    tasks: () =>
+      store.transaction((tx) =>
+        new ListTasks({ repository: tx.tasks }).execute({ ownerId: context.ownerId }),
+      ),
+    pending: () => store.transaction((tx) => tx.outbox.count()),
+  };
+};
+
+describe("同期（クライアント 2 台 + サーバー）", () => {
+  it("オフラインで登録した変更が、オンライン復帰後の同期で他の端末に届く", async () => {
+    const server = createServer();
+    const a = await createClient(server);
+    const b = await createClient(server);
+    a.network.online = false;
+
+    const id = uuidv7();
+    await a.run({ type: "CreateTask", id, title: "牛乳を買う" });
+    await a.run({ type: "ChangeTaskStatus", id, action: "start" });
+    await expect(a.sync()).rejects.toThrow("offline");
+    expect(await a.pending()).toBe(2);
+    expect((await a.tasks())[0]).toMatchObject({ title: "牛乳を買う", status: "doing" });
+
+    a.network.online = true;
+    expect(await a.sync()).toMatchObject({ pushed: 2, rejected: [] });
+    expect(await a.pending()).toBe(0);
+
+    await b.sync();
+    expect(await b.tasks()).toMatchObject([{ id, title: "牛乳を買う", status: "doing" }]);
+  });
+
+  it("競合した変更は差し戻され、ローカルはサーバーの状態に作り直される", async () => {
+    const server = createServer();
+    const a = await createClient(server);
+    const b = await createClient(server);
+    const id = uuidv7();
+    await a.run({ type: "CreateTask", id, title: "本を読む" });
+    await a.sync();
+    await b.sync();
+
+    // A が完了させて同期した後、オフラインの B が中止する
+    await a.run({ type: "ChangeTaskStatus", id, action: "complete" });
+    await a.sync();
+    b.network.online = false;
+    await b.run({ type: "ChangeTaskStatus", id, action: "cancel" });
+    expect((await b.tasks())[0]?.status).toBe("canceled");
+
+    b.network.online = true;
+    const report = await b.sync();
+
+    expect(report.rejected).toEqual([
+      expect.objectContaining({
+        title: "本を読む",
+        error: { type: "InvalidStatusTransition", from: "done", action: "cancel" },
+      }),
+    ]);
+    expect((await b.tasks())[0]).toMatchObject({ status: "done" });
+    expect(await b.pending()).toBe(0);
+  });
+
+  it("未送信の操作は、サーバーの変更を取り込んだ後も再実行されて残る", async () => {
+    const server = createServer();
+    const a = await createClient(server);
+    const b = await createClient(server);
+    const t1 = uuidv7();
+    const t2 = uuidv7();
+    await a.run({ type: "CreateTask", id: t1, title: "1" });
+    await a.run({ type: "CreateTask", id: t2, title: "2" });
+    await a.sync();
+    await b.sync();
+
+    // A が t1 に着手して同期。B はオフラインで t1 を完了させる（doing → done は有効）
+    await a.run({ type: "ChangeTaskStatus", id: t1, action: "start" });
+    await a.sync();
+    b.network.online = false;
+    await b.run({ type: "ChangeTaskStatus", id: t1, action: "complete" });
+
+    b.network.online = true;
+    const report = await b.sync();
+
+    expect(report).toMatchObject({ pushed: 1, rejected: [] });
+    expect((await b.tasks()).find((t) => t.id === t1)?.status).toBe("done");
+    await a.sync();
+    expect((await a.tasks()).find((t) => t.id === t1)?.status).toBe("done");
+  });
+
+  it("サーバーの変更ログが振り直されたら（epoch の変化）、最初から取り込み直す", async () => {
+    const before = createServer("epoch-1");
+    const a = await createClient(before);
+    const old = uuidv7();
+    await a.run({ type: "CreateTask", id: old, title: "消えるタスク" });
+    await a.run({ type: "ChangeTaskStatus", id: old, action: "start" });
+    await a.sync();
+
+    // サーバーのデータが失われて作り直された。別の端末 B が新しいサーバーにタスクを登録する
+    const after = createServer("epoch-2");
+    const b = await createClient(after);
+    const kept = uuidv7();
+    await b.run({ type: "CreateTask", id: kept, title: "新しいサーバーのタスク" });
+    await b.sync();
+
+    a.connectTo(after);
+    await a.sync();
+
+    // 新しいサーバーにあるタスクを取り込み、存在しないタスクはローカルからも消える
+    expect((await a.tasks()).map((t) => t.title)).toEqual(["新しいサーバーのタスク"]);
+  });
+});

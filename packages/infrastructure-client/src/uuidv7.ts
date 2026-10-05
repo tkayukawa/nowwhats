@@ -1,6 +1,6 @@
 /**
  * UUIDv7（RFC 9562）を生成する。先頭 48 ビットがミリ秒単位の時刻のため、生成順にほぼ並ぶ。
- * 同一ミリ秒内の順序は保証しない。ステップ 4 で infrastructure-client へ移す予定。
+ * 同一ミリ秒内の順序は保証しない。タスク ID と changeId の採番に使う。
  */
 export const uuidv7 = (now: number = Date.now()): string => {
   const bytes = crypto.getRandomValues(new Uint8Array(16));
