@@ -1,5 +1,5 @@
 {
-  "name": "@nowwhats/infrastructure-server",
+  "name": "@nowwhats/sync",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,7 +13,6 @@
   },
   "dependencies": {
     "@nowwhats/shared-kernel": "workspace:*",
-    "@nowwhats/sync": "workspace:*",
     "@nowwhats/task-management": "workspace:*"
   }
 }

@@ -18,5 +18,6 @@ export type {
   ChangeTaskStatusError,
 } from "./application/change-task-status.ts";
 export { ListTasks } from "./application/list-tasks.ts";
+export { toTaskDto } from "./application/task-dto.ts";
 export type { TaskDto } from "./application/task-dto.ts";
 export type { Clock } from "./application/ports.ts";

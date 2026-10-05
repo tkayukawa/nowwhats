@@ -17,6 +17,7 @@
     "@hono/zod-validator": "0.9.1",
     "@nowwhats/infrastructure-server": "workspace:*",
     "@nowwhats/shared-kernel": "workspace:*",
+    "@nowwhats/sync": "workspace:*",
     "@nowwhats/task-management": "workspace:*",
     "hono": "4.13.10",
     "zod": "4.6.5"
