@@ -1,53 +1,55 @@
-import { OwnerId } from "@nowwhats/shared-kernel";
 import { describe, expect, it } from "vitest";
-import type { Task } from "../domain/task.ts";
-import { TaskId } from "../domain/task-id.ts";
-import type { TaskRepository } from "../domain/task-repository.ts";
+import { fixedClock, InMemoryTaskRepository, OWNER, uuid } from "../testing/fixtures.ts";
 import { CreateTask } from "./create-task.ts";
-
-class InMemoryTaskRepository implements TaskRepository {
-  readonly tasks = new Map<string, Task>();
-
-  findById(_ownerId: OwnerId, id: TaskId): Promise<Task | null> {
-    return Promise.resolve(this.tasks.get(id) ?? null);
-  }
-
-  save(task: Task): Promise<void> {
-    this.tasks.set(task.id, task);
-    return Promise.resolve();
-  }
-}
 
 const setup = () => {
   const repository = new InMemoryTaskRepository();
-  const useCase = new CreateTask({
-    repository,
-    idGenerator: { next: () => TaskId.of("t-1") },
-    clock: { now: () => new Date("2026-10-05T00:00:00Z") },
-  });
-  return { repository, useCase };
+  return { repository, useCase: new CreateTask({ repository, clock: fixedClock }) };
 };
 
 describe("CreateTask", () => {
   it("タイトルのみでタスクを登録できる", async () => {
     const { repository, useCase } = setup();
 
-    const result = await useCase.execute({ ownerId: OwnerId.of("u-1"), title: "牛乳を買う" });
+    const result = await useCase.execute({ ownerId: OWNER, id: uuid(1), title: "牛乳を買う" });
 
-    expect(result).toEqual({ ok: true, value: { id: "t-1" } });
-    expect(repository.tasks.get("t-1")?.toSnapshot()).toMatchObject({
-      title: "牛乳を買う",
-      status: "todo",
-      priority: "medium",
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        id: uuid(1),
+        title: "牛乳を買う",
+        status: "todo",
+        priority: "medium",
+        dueDate: null,
+        version: 1,
+      },
     });
+    expect(repository.size).toBe(1);
   });
 
   it("空のタイトルは保存せずエラーを返す", async () => {
     const { repository, useCase } = setup();
 
-    const result = await useCase.execute({ ownerId: OwnerId.of("u-1"), title: " " });
+    const result = await useCase.execute({ ownerId: OWNER, id: uuid(1), title: " " });
 
     expect(result).toEqual({ ok: false, error: { type: "TaskTitleEmpty" } });
-    expect(repository.tasks.size).toBe(0);
+    expect(repository.size).toBe(0);
+  });
+
+  it("不正な ID は拒否する", async () => {
+    const { useCase } = setup();
+
+    const result = await useCase.execute({ ownerId: OWNER, id: "t-1", title: "a" });
+
+    expect(result).toEqual({ ok: false, error: { type: "TaskIdInvalid" } });
+  });
+
+  it("同じ ID の再登録は拒否する（同期の再送対策）", async () => {
+    const { useCase } = setup();
+    await useCase.execute({ ownerId: OWNER, id: uuid(1), title: "a" });
+
+    const result = await useCase.execute({ ownerId: OWNER, id: uuid(1), title: "b" });
+
+    expect(result).toEqual({ ok: false, error: { type: "TaskAlreadyExists" } });
   });
 });

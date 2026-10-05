@@ -13,7 +13,9 @@
     "deps:check": "depcruise packages apps --config .dependency-cruiser.cjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm run format:check && pnpm run deps:check && turbo run typecheck lint test"
+    "check": "pnpm run format:check && pnpm run deps:check && turbo run typecheck lint test build",
+    "dev": "turbo run dev",
+    "build": "turbo run build"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",

@@ -11,7 +11,7 @@ export type TaskTransitionError = {
   readonly action: TaskAction;
 };
 
-type TaskAction = "start" | "complete" | "cancel" | "reopen";
+export type TaskAction = "start" | "complete" | "cancel" | "reopen";
 
 /** 各操作を受け付ける遷移元の状態（docs/domain/glossary.md「状態遷移」） */
 const ALLOWED_FROM: Record<TaskAction, readonly TaskStatus[]> = {
@@ -20,6 +20,12 @@ const ALLOWED_FROM: Record<TaskAction, readonly TaskStatus[]> = {
   cancel: ["todo", "doing"],
   reopen: ["done", "canceled"],
 };
+
+/** 指定した状態から実行できる操作の一覧。UI のボタン出し分け等に使う。 */
+export const availableActions = (status: TaskStatus): TaskAction[] =>
+  (Object.keys(ALLOWED_FROM) as TaskAction[]).filter((action) =>
+    ALLOWED_FROM[action].includes(status),
+  );
 
 const NEXT_STATUS: Record<TaskAction, TaskStatus> = {
   start: "doing",
@@ -48,9 +54,12 @@ export interface TaskSnapshot {
 
 /** タスク集約。状態の変更は必ずこのクラスのメソッドを通す。 */
 export class Task {
+  private state: TaskSnapshot;
   private events: TaskEvent[] = [];
 
-  private constructor(private state: TaskSnapshot) {}
+  private constructor(state: TaskSnapshot) {
+    this.state = state;
+  }
 
   static create(params: {
     id: TaskId;
@@ -82,12 +91,21 @@ export class Task {
     return this.state.id;
   }
 
+  get ownerId(): OwnerId {
+    return this.state.ownerId;
+  }
+
   get status(): TaskStatus {
     return this.state.status;
   }
 
   toSnapshot(): TaskSnapshot {
     return { ...this.state };
+  }
+
+  /** 操作名を指定して状態を遷移させる。個別メソッド（start 等）と同じ規則で検証する。 */
+  apply(action: TaskAction, now: Date): Result<void, TaskTransitionError> {
+    return this.transition(action, now);
   }
 
   start(now: Date): Result<void, TaskTransitionError> {

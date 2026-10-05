@@ -1,15 +1,14 @@
-import { OwnerId } from "@nowwhats/shared-kernel";
 import { describe, expect, it } from "vitest";
-import { Task } from "./task.ts";
+import { availableActions, Task } from "./task.ts";
 import { TaskId } from "./task-id.ts";
 import { TaskTitle } from "./task-title.ts";
-
-const now = new Date("2026-10-05T00:00:00Z");
+import { NOW as now, OWNER, uuid } from "../testing/fixtures.ts";
 
 const newTask = (): Task => {
   const title = TaskTitle.create("牛乳を買う");
-  if (!title.ok) throw new Error("invalid title");
-  return Task.create({ id: TaskId.of("t-1"), ownerId: OwnerId.of("u-1"), title: title.value, now });
+  const id = TaskId.parse(uuid(1));
+  if (!title.ok || !id.ok) throw new Error("invalid fixture");
+  return Task.create({ id: id.value, ownerId: OWNER, title: title.value, now });
 };
 
 describe("Task", () => {
@@ -52,6 +51,22 @@ describe("Task", () => {
 
     expect(task.reopen(now).ok).toBe(true);
     expect(task.status).toBe("todo");
+  });
+});
+
+describe("availableActions", () => {
+  it("状態ごとに実行できる操作を返す", () => {
+    expect(availableActions("todo")).toEqual(["start", "complete", "cancel"]);
+    expect(availableActions("doing")).toEqual(["complete", "cancel"]);
+    expect(availableActions("done")).toEqual(["reopen"]);
+    expect(availableActions("canceled")).toEqual(["reopen"]);
+  });
+});
+
+describe("TaskId", () => {
+  it("UUID 形式のみ受け付け、小文字に正規化する", () => {
+    expect(TaskId.parse(uuid(1).toUpperCase())).toEqual({ ok: true, value: uuid(1) });
+    expect(TaskId.parse("t-1")).toEqual({ ok: false, error: { type: "TaskIdInvalid" } });
   });
 });
 
