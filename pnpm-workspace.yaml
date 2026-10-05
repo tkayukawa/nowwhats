@@ -1,0 +1,9 @@
+packages:
+  - "packages/*"
+  - "apps/*"
+
+# 依存バージョンは厳密にピン留めする（CLAUDE.md「バージョン管理」）
+savePrefix: ""
+
+# サプライチェーン攻撃対策: リリースから 7 日（10080 分）未満の版は解決しない（CLAUDE.md「パッケージ・モジュールのインストールルール」）
+minimumReleaseAge: 10080
