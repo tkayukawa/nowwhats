@@ -1,12 +1,10 @@
 import type { OwnerId } from "@nowwhats/shared-kernel";
-import type { ChangeTaskStatus, CreateTask } from "@nowwhats/task-management";
+import { executeCommand, type CommandUseCases } from "./execute-command.ts";
 import type { ProcessedChangeStore } from "./ports.ts";
 import type { ChangeResult } from "./sync-protocol.ts";
 import type { PendingChange } from "./task-command.ts";
 
-export interface ApplyPushedChangesDeps {
-  readonly createTask: Pick<CreateTask, "execute">;
-  readonly changeTaskStatus: Pick<ChangeTaskStatus, "execute">;
+export interface ApplyPushedChangesDeps extends CommandUseCases {
   readonly processedChanges: ProcessedChangeStore;
 }
 
@@ -41,25 +39,9 @@ export class ApplyPushedChanges {
   }
 
   private async apply(ownerId: OwnerId, change: PendingChange): Promise<ChangeResult> {
-    const { command, changeId } = change;
-    const result =
-      command.type === "CreateTask"
-        ? await this.deps.createTask.execute({
-            ownerId,
-            id: command.id,
-            title: command.title,
-            ...(command.priority !== undefined && { priority: command.priority }),
-            ...(command.dueDate !== undefined && {
-              dueDate: command.dueDate === null ? null : new Date(command.dueDate),
-            }),
-          })
-        : await this.deps.changeTaskStatus.execute({
-            ownerId,
-            id: command.id,
-            action: command.action,
-          });
+    const result = await executeCommand(change.command, ownerId, this.deps);
     return result.ok
-      ? { changeId, status: "applied" }
-      : { changeId, status: "rejected", error: result.error };
+      ? { changeId: change.changeId, status: "applied" }
+      : { changeId: change.changeId, status: "rejected", error: result.error };
   }
 }

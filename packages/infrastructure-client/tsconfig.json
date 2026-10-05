@@ -1,0 +1,8 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // crypto.getRandomValues（Web Crypto）の型のため。ブラウザ・Worker・Node のいずれでも利用できる
+    "lib": ["ES2023", "DOM"]
+  },
+  "include": ["src"]
+}

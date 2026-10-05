@@ -26,6 +26,8 @@ export interface AppDeps {
   readonly repository: TaskRepository;
   readonly changeFeed: TaskChangeFeed;
   readonly processedChanges: ProcessedChangeStore;
+  /** 変更ログの識別子（ADR 0006）。メモリ実装では起動ごとに変わる */
+  readonly changeLogEpoch: string;
   readonly clock: Clock;
   readonly resolveOwner: OwnerResolver;
 }
@@ -73,7 +75,7 @@ export const createApp = (deps: AppDeps) => {
     changeTaskStatus,
     processedChanges: deps.processedChanges,
   });
-  const pullChanges = new PullChanges({ feed: deps.changeFeed });
+  const pullChanges = new PullChanges({ feed: deps.changeFeed, epoch: deps.changeLogEpoch });
 
   return (
     new Hono<{ Variables: { ownerId: OwnerId } }>()

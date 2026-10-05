@@ -1,65 +1,49 @@
 import { availableActions, type TaskAction } from "@nowwhats/task-management";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { api, type TaskView } from "./api-client.ts";
-import { errorMessage } from "./error-message.ts";
-import { uuidv7 } from "./uuidv7.ts";
-
-const ACTION_LABEL: Record<TaskAction, string> = {
-  start: "着手",
-  complete: "完了",
-  cancel: "中止",
-  reopen: "再開",
-};
-
-const STATUS_LABEL: Record<TaskView["status"], string> = {
-  todo: "未着手",
-  doing: "進行中",
-  done: "完了",
-  canceled: "中止",
-};
+import { useState, type FormEvent } from "react";
+import { ACTION_LABEL, rejectionLabel, STATUS_LABEL, syncLabel } from "./labels.ts";
+import { useLocalTasks } from "./local/use-local-tasks.ts";
 
 export const App = () => {
-  const [tasks, setTasks] = useState<TaskView[]>([]);
+  const { state, createTask, changeStatus, dismissRejections } = useLocalTasks();
   const [title, setTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const reload = useCallback(async () => {
-    const res = await api.api.tasks.$get();
-    if (res.ok) {
-      setTasks((await res.json()).tasks);
-    } else {
-      setError(errorMessage(await res.json()));
-    }
-  }, []);
-
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setError(null);
-    const res = await api.api.tasks.$post({ json: { id: uuidv7(), title } });
-    if (!res.ok) {
-      setError(errorMessage(await res.json()));
-      return;
-    }
-    setTitle("");
-    await reload();
+    const failure = await createTask(title);
+    setError(failure);
+    if (failure === null) setTitle("");
   };
 
   const handleAction = async (id: string, action: TaskAction) => {
-    setError(null);
-    const res = await api.api.tasks[":id"].status.$post({ param: { id }, json: { action } });
-    if (!res.ok) {
-      setError(errorMessage(await res.json()));
-    }
-    await reload();
+    setError(await changeStatus(id, action));
   };
 
   return (
     <main className="app">
-      <h1>nowwhats</h1>
+      <header className="header">
+        <h1>nowwhats</h1>
+        <span className="sync-status" role="status">
+          {state.ready ? syncLabel(state) : "読み込み中…"}
+        </span>
+      </header>
+      {!state.persistent && (
+        <p role="alert" className="error">
+          このブラウザでは端末内への保存ができないため、再読み込みすると未送信の変更が失われます。
+        </p>
+      )}
+      {state.rejections.length > 0 && (
+        <div role="alert" className="notice">
+          <ul>
+            {state.rejections.map((r) => (
+              <li key={r.change.changeId}>{rejectionLabel(r)}</li>
+            ))}
+          </ul>
+          <button type="button" onClick={dismissRejections}>
+            閉じる
+          </button>
+        </div>
+      )}
       <form className="capture" onSubmit={(e) => void handleSubmit(e)}>
         <input
           aria-label="タスクのタイトル"
@@ -68,7 +52,9 @@ export const App = () => {
           onChange={(e) => setTitle(e.target.value)}
           autoFocus
         />
-        <button type="submit">登録</button>
+        <button type="submit" disabled={!state.ready}>
+          登録
+        </button>
       </form>
       {error !== null && (
         <p role="alert" className="error">
@@ -76,7 +62,7 @@ export const App = () => {
         </p>
       )}
       <ul className="tasks">
-        {tasks.map((task) => (
+        {state.tasks.map((task) => (
           <li key={task.id} className={`task task--${task.status}`}>
             <span className="task__title">{task.title}</span>
             <span className="task__status">{STATUS_LABEL[task.status]}</span>

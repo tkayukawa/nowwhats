@@ -9,4 +9,11 @@ export default defineConfig({
       "/api": "http://127.0.0.1:8787",
     },
   },
+  // sqlite-wasm は .wasm を相対 URL で読み込むため、事前バンドルの対象から外す（パッケージの README の指示）
+  optimizeDeps: {
+    exclude: ["@sqlite.org/sqlite-wasm"],
+  },
+  worker: {
+    format: "es",
+  },
 });

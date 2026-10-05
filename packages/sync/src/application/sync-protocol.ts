@@ -14,6 +14,11 @@ export interface TaskChange {
 }
 
 export interface PullResult {
+  /**
+   * サーバーの変更ログの識別子。DB の作り直し等で seq が振り直されると値が変わる。
+   * クライアントは前回と異なる値を受け取ったら、cursor を 0 に戻して全件を取り込み直す。
+   */
+  readonly epoch: string;
   readonly changes: TaskChange[];
   /** 次回の pull で渡すカーソル（取得済みの最大 seq） */
   readonly cursor: number;
