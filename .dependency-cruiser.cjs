@@ -26,10 +26,14 @@ module.exports = {
       name: "application-depends-only-inward",
       severity: "error",
       comment:
-        "application は同一パッケージの domain / application と shared-kernel 以外に依存しない",
+        "application は同一パッケージの domain / application、shared-kernel、他コンテキストの公開 API（infrastructure-* を除く）以外に依存しない",
       from: { path: "^packages/([^/]+)/src/application/", pathNot: TEST_FILE },
       to: {
-        pathNot: ["^packages/$1/src/(domain|application)/", "^packages/shared-kernel/src/"],
+        pathNot: [
+          "^packages/$1/src/(domain|application)/",
+          "^packages/shared-kernel/src/",
+          "^packages/(?!infrastructure-)[^/]+/src/index\\.ts$",
+        ],
       },
     },
     {

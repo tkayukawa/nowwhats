@@ -208,6 +208,9 @@ importers:
       '@nowwhats/shared-kernel':
         specifier: workspace:*
         version: link:../../packages/shared-kernel
+      '@nowwhats/sync':
+        specifier: workspace:*
+        version: link:../../packages/sync
       '@nowwhats/task-management':
         specifier: workspace:*
         version: link:../../packages/task-management
@@ -254,11 +257,23 @@ importers:
       '@nowwhats/shared-kernel':
         specifier: workspace:*
         version: link:../shared-kernel
+      '@nowwhats/sync':
+        specifier: workspace:*
+        version: link:../sync
       '@nowwhats/task-management':
         specifier: workspace:*
         version: link:../task-management
 
   packages/shared-kernel: {}
+
+  packages/sync:
+    dependencies:
+      '@nowwhats/shared-kernel':
+        specifier: workspace:*
+        version: link:../shared-kernel
+      '@nowwhats/task-management':
+        specifier: workspace:*
+        version: link:../task-management
 
   packages/task-management:
     dependencies:

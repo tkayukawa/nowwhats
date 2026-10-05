@@ -1,11 +1,17 @@
 import { serve } from "@hono/node-server";
-import { InMemoryTaskRepository } from "@nowwhats/infrastructure-server";
+import {
+  InMemoryProcessedChangeStore,
+  InMemoryTaskRepository,
+} from "@nowwhats/infrastructure-server";
 import { createApp } from "./app.ts";
 import { createDevOwnerResolver } from "./dev-owner-resolver.ts";
 
 // Composition Root: ここでだけ具体的な実装（Adapter）を組み立てる
+const repository = new InMemoryTaskRepository();
 const app = createApp({
-  repository: new InMemoryTaskRepository(),
+  repository,
+  changeFeed: repository,
+  processedChanges: new InMemoryProcessedChangeStore(),
   clock: { now: () => new Date() },
   resolveOwner: createDevOwnerResolver(),
 });

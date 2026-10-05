@@ -32,4 +32,20 @@ describe("InMemoryTaskRepository", () => {
     expect(await repository.findById(OwnerId.of("u-2"), task.id)).toBeNull();
     expect(await repository.findAllByOwner(OwnerId.of("u-2"))).toEqual([]);
   });
+
+  it("保存のたびに変更ログへ連番付きで記録し、利用者ごとに cursor 以降を返す", async () => {
+    const repository = new InMemoryTaskRepository();
+    const task = newTask();
+    await repository.save(task);
+    task.complete(now);
+    await repository.save(task);
+
+    const all = await repository.since(owner, 0, 10);
+    expect(all.map((c) => [c.seq, c.task.status])).toEqual([
+      [1, "todo"],
+      [2, "done"],
+    ]);
+    expect(await repository.since(owner, 1, 10)).toHaveLength(1);
+    expect(await repository.since(OwnerId.of("u-2"), 0, 10)).toEqual([]);
+  });
 });

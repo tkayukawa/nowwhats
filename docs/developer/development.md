@@ -51,7 +51,8 @@ packages/
     src/application/   # ユースケース・Port I/F
     src/testing/       # テスト用の部品（公開 API には含めない）
     src/index.ts       # 公開 API（他パッケージはここからのみ import する）
-  infrastructure-server/ # サーバー用 Adapter（現時点はメモリ上の Repository）
+  sync/                # 同期の取り決め（操作・結果の型）とユースケース（ADR 0006）
+  infrastructure-server/ # サーバー用 Adapter（現時点はメモリ上の Repository・変更ログ・処理済み記録）
 apps/
   api/                 # Hono による HTTP API。src/main.ts が Composition Root
   web/                 # Vite + React の Web クライアント
@@ -64,13 +65,13 @@ apps/
 
 ## 依存ルール（`.dependency-cruiser.cjs` で強制）
 
-| ルール                            | 内容                                                                                                                    |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `domain-is-pure`                  | `domain` は同一パッケージの `domain` と `shared-kernel` 以外に依存しない。npm パッケージ・Node 組み込みモジュールも禁止 |
-| `application-depends-only-inward` | `application` は同一パッケージの `domain` / `application` と `shared-kernel` 以外に依存しない                           |
-| `shared-kernel-is-pure`           | `shared-kernel` は外部に依存しない                                                                                      |
-| `cross-package-via-public-api`    | 他パッケージの内部ファイルを直接 import しない（`src/index.ts` 経由のみ）                                               |
-| `no-circular`                     | 循環依存の禁止                                                                                                          |
+| ルール                            | 内容                                                                                                                                                              |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `domain-is-pure`                  | `domain` は同一パッケージの `domain` と `shared-kernel` 以外に依存しない。npm パッケージ・Node 組み込みモジュールも禁止                                           |
+| `application-depends-only-inward` | `application` は同一パッケージの `domain` / `application`、`shared-kernel`、他コンテキストの公開 API（`src/index.ts`。`infrastructure-*` は除く）以外に依存しない |
+| `shared-kernel-is-pure`           | `shared-kernel` は外部に依存しない                                                                                                                                |
+| `cross-package-via-public-api`    | 他パッケージの内部ファイルを直接 import しない（`src/index.ts` 経由のみ）                                                                                         |
+| `no-circular`                     | 循環依存の禁止                                                                                                                                                    |
 
 - テストファイル（`*.test.ts`）は `vitest` の import を許可するため、純粋性ルールの対象外とする。
 - 加えて `tsconfig.base.json` で `lib: ["ES2023"]`・`types: []` とし、`domain` / `application` で DOM や Node.js の型が使えないようにしている（全プラットフォームで動かすため。ADR 0001）。
