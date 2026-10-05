@@ -26,8 +26,24 @@ pnpm run dev
 - 現時点の制約:
   - API サーバーのデータはメモリ上に保存するため、再起動すると消える。再起動するとクライアントは epoch の変化を検知し、サーバーの状態（空）に合わせてローカルのタスクも消える（ADR 0006）。
   - 認証は未実装で、全リクエストを開発用の固定利用者（`dev-user`）として扱う。`NODE_ENV=production` では API が起動しない。外部に公開しないこと。
-  - オフライン中に画面を再読み込みすると、画面自体が開けない（ステップ 4-3 の Service Worker で対応予定）。
+  - 開発サーバー（`pnpm run dev`）では Service Worker を登録しないため、オフライン中に再読み込みすると画面が開けない。オフラインでの画面読み込みは、下記「本番ビルドで確認する」の手順で確認する。
+  - 同じブラウザの 2 つ目のタブはメモリ保存に切り替わる（OPFS の SAH プール方式は同時に 1 タブのみ）。
 - ローカル DB を消すには、ブラウザの開発者ツールでサイトのデータ（ストレージ）を削除する。
+
+### 本番ビルドで確認する（Service Worker）
+
+```bash
+pnpm run dev                                    # API を起動するため（別ターミナル）
+pnpm --filter @nowwhats/web build
+pnpm --filter @nowwhats/web preview             # http://localhost:4173 で配信。/api は API サーバーへ中継
+```
+
+- Service Worker（`apps/web/public/sw.js`）は本番ビルドでのみ登録する。開発サーバーの HMR と干渉させないため。
+- ビルド時に `precache-manifest.json`（ビルド成果物の一覧と版）を出力し、Service Worker がインストール時にまとめてキャッシュする。Worker・`.wasm` も含めて初回表示時点でキャッシュするため。
+- 画面の読み込みはネットワーク優先（オフライン時はキャッシュ）、その他のファイルはキャッシュ優先。`/api` はキャッシュしない。
+- 新しい版をデプロイすると、次回の読み込みで新しい Service Worker がインストールされ、古いキャッシュは削除される。
+- ポートが異なると別オリジンになるため、`preview`（4173）と `dev`（5173）のローカル DB は別々になる。
+- Service Worker を解除するには、開発者ツールの Application → Service workers → Unregister を使う。
 
 ## コマンド
 
