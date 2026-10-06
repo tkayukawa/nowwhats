@@ -12,6 +12,7 @@ import {
   PRIORITIES,
   StoryPoint,
   Task,
+  TaskDescription,
   TASK_STATUSES,
   TaskId,
   TaskTitle,
@@ -23,6 +24,7 @@ type TaskRow = {
   id: string;
   owner_id: string;
   title: string;
+  description: string;
   status: string;
   priority: string;
   due_date: string | null;
@@ -36,13 +38,22 @@ const toTask = (row: TaskRow, ownerId: OwnerId): Task => {
   const status = TASK_STATUSES.find((s) => s === row.status);
   const priority = PRIORITIES.find((p) => p === row.priority);
   const storyPoints = StoryPoint.parse(row.story_points);
-  if (!id.ok || !title.ok || status === undefined || priority === undefined || !storyPoints.ok) {
+  const description = TaskDescription.create(row.description);
+  if (
+    !id.ok ||
+    !title.ok ||
+    !description.ok ||
+    status === undefined ||
+    priority === undefined ||
+    !storyPoints.ok
+  ) {
     throw new Error(`corrupted local task row: ${row.id}`);
   }
   return Task.reconstruct({
     id: id.value,
     ownerId,
     title: title.value,
+    description: description.value,
     status,
     priority,
     dueDate: row.due_date === null ? null : new Date(row.due_date),
@@ -74,16 +85,18 @@ class SqliteTaskRepository implements LocalTaskRepository {
   save(task: Task): Promise<void> {
     const s = task.toSnapshot();
     this.db.run(
-      `INSERT INTO tasks (id, owner_id, title, status, priority, due_date, story_points, version)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO tasks (id, owner_id, title, description, status, priority, due_date, story_points, version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (id) DO UPDATE SET
-         owner_id = excluded.owner_id, title = excluded.title, status = excluded.status,
+         owner_id = excluded.owner_id, title = excluded.title, description = excluded.description,
+         status = excluded.status,
          priority = excluded.priority, due_date = excluded.due_date,
          story_points = excluded.story_points, version = excluded.version`,
       [
         s.id,
         s.ownerId,
         s.title,
+        s.description,
         s.status,
         s.priority,
         s.dueDate?.toISOString() ?? null,

@@ -74,6 +74,8 @@ const handle = async (request: WorkerRequest): Promise<unknown> => {
       return run({ type: "CreateTask", id: uuidv7(), ...request.task });
     case "changeStatus":
       return run({ type: "ChangeTaskStatus", id: request.id, action: request.action });
+    case "editTask":
+      return run({ type: "EditTask", id: request.id, changes: request.changes });
     case "sync":
       return (await app).sync.execute();
   }

@@ -76,3 +76,23 @@ describe("TaskTitle", () => {
     expect(TaskTitle.create("   ")).toEqual({ ok: false, error: { type: "TaskTitleEmpty" } });
   });
 });
+
+describe("Task.edit", () => {
+  it("値が変わった項目だけを TaskEdited に記録する", () => {
+    const task = newTask();
+    task.pullEvents();
+    const title = TaskTitle.create("牛乳と卵を買う");
+    if (!title.ok) throw new Error("fixture");
+
+    task.edit({ title: title.value, priority: "medium", storyPoints: 3 }, now);
+
+    expect(task.pullEvents()).toEqual([
+      expect.objectContaining({ type: "TaskEdited", fields: ["title", "storyPoints"] }),
+    ]);
+    expect(task.toSnapshot()).toMatchObject({
+      title: "牛乳と卵を買う",
+      storyPoints: 3,
+      version: 2,
+    });
+  });
+});

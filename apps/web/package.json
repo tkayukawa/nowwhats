@@ -18,7 +18,9 @@
     "@nowwhats/shared-kernel": "workspace:*",
     "@nowwhats/sync": "workspace:*",
     "@nowwhats/task-management": "workspace:*",
+    "dompurify": "3.4.16",
     "hono": "4.13.10",
+    "marked": "18.0.14",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

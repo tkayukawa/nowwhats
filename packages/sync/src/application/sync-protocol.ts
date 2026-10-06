@@ -1,6 +1,11 @@
-import type { CreateTaskError, ChangeTaskStatusError, TaskDto } from "@nowwhats/task-management";
+import type {
+  ChangeTaskStatusError,
+  CreateTaskError,
+  EditTaskError,
+  TaskDto,
+} from "@nowwhats/task-management";
 
-export type CommandError = CreateTaskError | ChangeTaskStatusError;
+export type CommandError = CreateTaskError | ChangeTaskStatusError | EditTaskError;
 
 /** push した変更 1 件ごとの処理結果 */
 export type ChangeResult =

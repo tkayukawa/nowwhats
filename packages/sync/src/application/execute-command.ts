@@ -1,11 +1,12 @@
 import type { OwnerId, Result } from "@nowwhats/shared-kernel";
-import type { ChangeTaskStatus, CreateTask, TaskDto } from "@nowwhats/task-management";
+import type { ChangeTaskStatus, CreateTask, EditTask, TaskDto } from "@nowwhats/task-management";
 import type { CommandError } from "./sync-protocol.ts";
 import type { TaskCommand } from "./task-command.ts";
 
 export interface CommandUseCases {
   readonly createTask: Pick<CreateTask, "execute">;
   readonly changeTaskStatus: Pick<ChangeTaskStatus, "execute">;
+  readonly editTask: Pick<EditTask, "execute">;
 }
 
 /** 操作を対応するユースケースで実行する。クライアント・サーバーの両方で使う。 */
@@ -28,5 +29,16 @@ export const executeCommand = (
       });
     case "ChangeTaskStatus":
       return useCases.changeTaskStatus.execute({ ownerId, id: command.id, action: command.action });
+    case "EditTask": {
+      const { dueDate, ...rest } = command.changes;
+      return useCases.editTask.execute({
+        ownerId,
+        id: command.id,
+        changes: {
+          ...rest,
+          ...(dueDate !== undefined && { dueDate: dueDate === null ? null : new Date(dueDate) }),
+        },
+      });
+    }
   }
 };

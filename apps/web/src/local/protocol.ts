@@ -9,12 +9,22 @@ export interface NewTask {
   readonly storyPoints: number;
 }
 
+/** 変更する項目だけを指定する（dueDate は ISO 8601。null は期限なし） */
+export interface TaskEdits {
+  readonly title?: string;
+  readonly description?: string;
+  readonly priority?: Priority;
+  readonly dueDate?: string | null;
+  readonly storyPoints?: number;
+}
+
 /** メインスレッド → Worker への要求 */
 export type WorkerRequest =
   | { readonly type: "init" }
   | { readonly type: "listTasks" }
   | { readonly type: "createTask"; readonly task: NewTask }
   | { readonly type: "changeStatus"; readonly id: string; readonly action: TaskAction }
+  | { readonly type: "editTask"; readonly id: string; readonly changes: TaskEdits }
   | { readonly type: "sync" };
 
 export interface LocalSnapshot {
@@ -29,6 +39,7 @@ export interface WorkerResponseMap {
   listTasks: LocalSnapshot;
   createTask: { readonly error: string | null };
   changeStatus: { readonly error: string | null };
+  editTask: { readonly error: string | null };
   sync: SyncReport;
 }
 

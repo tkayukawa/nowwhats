@@ -16,10 +16,12 @@ const Points = ({ value, prefix = "" }: { value: number; prefix?: string }) => (
 export interface TaskListProps {
   readonly tasks: readonly TaskDto[];
   readonly today: Date;
+  readonly selectedId: string | null;
   readonly onAction: (id: string, action: TaskAction) => void;
+  readonly onOpen: (id: string) => void;
 }
 
-export const TaskList = ({ tasks, today, onAction }: TaskListProps) => {
+export const TaskList = ({ tasks, today, selectedId, onAction, onOpen }: TaskListProps) => {
   const [closedOpen, setClosedOpen] = useState(false);
   const groups = groupTasks(tasks);
   const open = [
@@ -30,7 +32,14 @@ export const TaskList = ({ tasks, today, onAction }: TaskListProps) => {
   const rows = (items: readonly TaskDto[]) => (
     <ul className="border-t border-faint">
       {items.map((t) => (
-        <TaskRow key={t.id} task={t} today={today} onAction={onAction} />
+        <TaskRow
+          key={t.id}
+          task={t}
+          today={today}
+          selected={t.id === selectedId}
+          onAction={onAction}
+          onOpen={onOpen}
+        />
       ))}
     </ul>
   );

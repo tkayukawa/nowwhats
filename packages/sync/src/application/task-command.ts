@@ -19,6 +19,19 @@ export type TaskCommand =
       readonly type: "ChangeTaskStatus";
       readonly id: string;
       readonly action: TaskAction;
+    }
+  | {
+      /** 指定した項目だけを変更する。サーバーへの到着順に、項目ごとに後の変更が優先される（ADR 0006） */
+      readonly type: "EditTask";
+      readonly id: string;
+      readonly changes: {
+        readonly title?: string | undefined;
+        readonly description?: string | undefined;
+        readonly priority?: Priority | undefined;
+        /** ISO 8601。null は期限なし */
+        readonly dueDate?: string | null | undefined;
+        readonly storyPoints?: number | undefined;
+      };
     };
 
 /** 送信待ちの変更。changeId はクライアントで生成し、再送時の重複適用を防ぐ。 */

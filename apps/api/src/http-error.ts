@@ -1,6 +1,10 @@
-import type { ChangeTaskStatusError, CreateTaskError } from "@nowwhats/task-management";
+import type {
+  ChangeTaskStatusError,
+  CreateTaskError,
+  EditTaskError,
+} from "@nowwhats/task-management";
 
-type DomainError = CreateTaskError | ChangeTaskStatusError;
+type DomainError = CreateTaskError | ChangeTaskStatusError | EditTaskError;
 
 export interface HttpError {
   readonly status: 400 | 404 | 409;
@@ -13,6 +17,7 @@ export const toHttpError = (error: DomainError): HttpError => {
     case "TaskIdInvalid":
     case "TaskTitleEmpty":
     case "StoryPointInvalid":
+    case "TaskDescriptionTooLong":
       return { status: 400, body: { error } };
     case "TaskNotFound":
       return { status: 404, body: { error } };

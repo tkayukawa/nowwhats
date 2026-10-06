@@ -1,5 +1,7 @@
 export { Task, availableActions } from "./domain/task.ts";
-export type { TaskAction, TaskSnapshot, TaskTransitionError } from "./domain/task.ts";
+export type { TaskAction, TaskChanges, TaskSnapshot, TaskTransitionError } from "./domain/task.ts";
+export { TaskDescription, TASK_DESCRIPTION_MAX_LENGTH } from "./domain/task-description.ts";
+export type { TaskDescriptionError } from "./domain/task-description.ts";
 export { TaskId } from "./domain/task-id.ts";
 export type { TaskIdError } from "./domain/task-id.ts";
 export { TaskTitle } from "./domain/task-title.ts";
@@ -19,6 +21,8 @@ export type {
   ChangeTaskStatusInput,
   ChangeTaskStatusError,
 } from "./application/change-task-status.ts";
+export { EditTask } from "./application/edit-task.ts";
+export type { EditTaskChanges, EditTaskError, EditTaskInput } from "./application/edit-task.ts";
 export { ListTasks } from "./application/list-tasks.ts";
 export { fromTaskDto, toTaskDto } from "./application/task-dto.ts";
 export type { TaskDto } from "./application/task-dto.ts";

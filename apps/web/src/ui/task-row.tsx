@@ -1,5 +1,6 @@
 import { availableActions, type TaskAction, type TaskDto } from "@nowwhats/task-management";
 import { useEffect, useRef, useState } from "react";
+import { NoteIcon } from "../icons.tsx";
 import { dueInfo, isOpen } from "../task-view.ts";
 
 const MENU_LABEL: Record<TaskAction, string> = {
@@ -32,10 +33,12 @@ const checkStyle = (status: TaskDto["status"]): string => {
 export interface TaskRowProps {
   readonly task: TaskDto;
   readonly today: Date;
+  readonly selected: boolean;
   readonly onAction: (id: string, action: TaskAction) => void;
+  readonly onOpen: (id: string) => void;
 }
 
-export const TaskRow = ({ task, today, onAction }: TaskRowProps) => {
+export const TaskRow = ({ task, today, selected, onAction, onOpen }: TaskRowProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const primary: TaskAction = isOpen(task.status) ? "complete" : "reopen";
@@ -58,7 +61,11 @@ export const TaskRow = ({ task, today, onAction }: TaskRowProps) => {
   }, [menuOpen]);
 
   return (
-    <li className="group grid min-h-[38px] grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 border-b border-faint py-1 pr-1 pl-2 hover:bg-surface">
+    <li
+      className={`group grid min-h-[38px] grid-cols-[auto_minmax(0,1fr)_auto_auto] items-center gap-2.5 border-b border-faint py-1 pr-1 pl-2 ${
+        selected ? "bg-accent-soft" : "hover:bg-surface"
+      }`}
+    >
       <button
         type="button"
         onClick={() => onAction(task.id, primary)}
@@ -68,7 +75,12 @@ export const TaskRow = ({ task, today, onAction }: TaskRowProps) => {
         {task.status === "done" && "✓"}
       </button>
 
-      <span className="flex min-w-0 items-center gap-2 max-[520px]:flex-wrap">
+      <button
+        type="button"
+        onClick={() => onOpen(task.id)}
+        aria-label={`${task.title} の詳細を開く`}
+        className="flex min-w-0 items-center gap-2 text-left max-[520px]:flex-wrap"
+      >
         <span
           className={`min-w-0 truncate text-[0.925rem] max-[520px]:line-clamp-2 max-[520px]:basis-full max-[520px]:whitespace-normal ${
             closed ? "text-muted line-through decoration-muted/60" : ""
@@ -76,6 +88,13 @@ export const TaskRow = ({ task, today, onAction }: TaskRowProps) => {
         >
           {task.title}
         </span>
+        {task.description !== "" && (
+          <NoteIcon
+            className="size-3.5 shrink-0 text-muted"
+            aria-label="説明あり"
+            aria-hidden={false}
+          />
+        )}
         <span className="ml-auto flex shrink-0 gap-2 text-xs whitespace-nowrap text-muted max-[520px]:ml-0">
           {task.status === "doing" && <span className="font-bold text-accent">進行中</span>}
           {task.priority === "high" && (
@@ -91,7 +110,7 @@ export const TaskRow = ({ task, today, onAction }: TaskRowProps) => {
             </span>
           )}
         </span>
-      </span>
+      </button>
 
       <span
         title="ストーリーポイント"

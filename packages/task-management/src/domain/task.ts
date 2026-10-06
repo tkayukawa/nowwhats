@@ -1,6 +1,7 @@
 import { err, ok, type OwnerId, type Result } from "@nowwhats/shared-kernel";
 import { DEFAULT_PRIORITY, type Priority } from "./priority.ts";
 import { DEFAULT_STORY_POINT, type StoryPoint } from "./story-point.ts";
+import { TaskDescription } from "./task-description.ts";
 import type { TaskEvent } from "./task-events.ts";
 import type { TaskId } from "./task-id.ts";
 import type { TaskStatus } from "./task-status.ts";
@@ -46,6 +47,7 @@ export interface TaskSnapshot {
   readonly id: TaskId;
   readonly ownerId: OwnerId;
   readonly title: TaskTitle;
+  readonly description: TaskDescription;
   readonly status: TaskStatus;
   readonly priority: Priority;
   readonly dueDate: Date | null;
@@ -53,6 +55,20 @@ export interface TaskSnapshot {
   /** 更新ごとに増える版。同期時の競合検出に使う（ADR 0002） */
   readonly version: number;
 }
+
+/** 編集できる項目。指定した項目だけを変更する */
+export interface TaskChanges {
+  readonly title?: TaskTitle;
+  readonly description?: TaskDescription;
+  readonly priority?: Priority;
+  readonly dueDate?: Date | null;
+  readonly storyPoints?: StoryPoint;
+}
+
+const EDITABLE_FIELDS = ["title", "description", "priority", "dueDate", "storyPoints"] as const;
+
+const sameValue = (a: unknown, b: unknown): boolean =>
+  a instanceof Date && b instanceof Date ? a.getTime() === b.getTime() : a === b;
 
 /** タスク集約。状態の変更は必ずこのクラスのメソッドを通す。 */
 export class Task {
@@ -76,6 +92,7 @@ export class Task {
       id: params.id,
       ownerId: params.ownerId,
       title: params.title,
+      description: TaskDescription.empty,
       status: "todo",
       priority: params.priority ?? DEFAULT_PRIORITY,
       dueDate: params.dueDate ?? null,
@@ -128,6 +145,27 @@ export class Task {
     return this.transition("reopen", now);
   }
 
+  /**
+   * 項目を編集する。値が変わった項目があるときだけ version を上げ、TaskEdited を発行する。
+   * 完了・中止のタスクも編集できる（振り返りでの追記を想定）。
+   */
+  edit(changes: TaskChanges, now: Date): void {
+    const changed = EDITABLE_FIELDS.filter(
+      (field) => changes[field] !== undefined && !sameValue(changes[field], this.state[field]),
+    );
+    if (changed.length === 0) {
+      return;
+    }
+    this.state = { ...this.state, ...changes, version: this.state.version + 1 };
+    this.events.push({
+      type: "TaskEdited",
+      taskId: this.state.id,
+      ownerId: this.state.ownerId,
+      occurredAt: now,
+      fields: changed,
+    });
+  }
+
   /** 発行済みのドメインイベントを取り出し、内部のバッファを空にする。 */
   pullEvents(): TaskEvent[] {
     const events = this.events;
@@ -148,7 +186,7 @@ export class Task {
     return ok(undefined);
   }
 
-  private record(type: TaskEvent["type"], now: Date): void {
+  private record(type: Exclude<TaskEvent["type"], "TaskEdited">, now: Date): void {
     this.events.push({ type, taskId: this.state.id, ownerId: this.state.ownerId, occurredAt: now });
   }
 }

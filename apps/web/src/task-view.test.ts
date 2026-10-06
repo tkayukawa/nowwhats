@@ -16,6 +16,7 @@ const day = (offset: number) => dueDateFromToday(offset, today);
 const task = (overrides: Partial<TaskDto>): TaskDto => ({
   id: "0199b1a0-0000-7000-8000-000000000001",
   title: "a",
+  description: "",
   status: "todo",
   priority: "medium",
   dueDate: null,

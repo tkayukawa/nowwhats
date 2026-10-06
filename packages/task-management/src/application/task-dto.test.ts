@@ -23,6 +23,7 @@ describe("fromTaskDto", () => {
     const dto: TaskDto = {
       id: "x",
       title: "a",
+      description: "",
       status: "todo",
       priority: "medium",
       dueDate: null,

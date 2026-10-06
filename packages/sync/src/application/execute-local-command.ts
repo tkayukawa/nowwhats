@@ -1,5 +1,11 @@
 import type { OwnerId, Result } from "@nowwhats/shared-kernel";
-import { ChangeTaskStatus, CreateTask, type Clock, type TaskDto } from "@nowwhats/task-management";
+import {
+  ChangeTaskStatus,
+  CreateTask,
+  EditTask,
+  type Clock,
+  type TaskDto,
+} from "@nowwhats/task-management";
 import type { LocalStore, LocalTransaction } from "./client-ports.ts";
 import { executeCommand } from "./execute-command.ts";
 import type { CommandError } from "./sync-protocol.ts";
@@ -19,6 +25,7 @@ export const executeLocally = (
   executeCommand(command, context.ownerId, {
     createTask: new CreateTask({ repository: tx.tasks, clock: context.clock }),
     changeTaskStatus: new ChangeTaskStatus({ repository: tx.tasks, clock: context.clock }),
+    editTask: new EditTask({ repository: tx.tasks, clock: context.clock }),
   });
 
 export interface ExecuteLocalCommandDeps {

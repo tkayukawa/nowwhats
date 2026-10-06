@@ -87,6 +87,11 @@ apps/
 - ダークモードは端末の設定（`prefers-color-scheme`）に従う。変数の値だけを切り替えるので、部品側に `dark:` の指定は不要。
 - 日本語は端末のフォントを使い、ロゴと数字は同梱の Outfit（`@fontsource/outfit`）を使う（`font-mark`）。
 
+### Markdown の表示
+
+- 説明文は `marked` で HTML に変換し、**必ず `DOMPurify` で無害化してから** 表示する（`apps/web/src/ui/markdown.tsx` の `renderMarkdown`）。`dangerouslySetInnerHTML` には `renderMarkdown` の結果以外を渡さない。
+- リンクは新しいタブで開き、`rel="noopener noreferrer"` を付ける。
+
 ### クライアント（Web）の構成
 
 ```

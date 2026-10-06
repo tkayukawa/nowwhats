@@ -78,11 +78,11 @@ describe("SqliteLocalStore", () => {
     const db = await createTestDatabase();
 
     expect(() => migrate(db)).not.toThrow();
-    expect(db.all<{ user_version: number }>("PRAGMA user_version")).toEqual([{ user_version: 2 }]);
+    expect(db.all<{ user_version: number }>("PRAGMA user_version")).toEqual([{ user_version: 3 }]);
   });
 });
 
-describe("マイグレーション 2（ストーリーポイント）", () => {
+describe("マイグレーション 2・3（ストーリーポイント・説明文）", () => {
   it("ポイント導入前に保存されたタスクは 1 ポイントとして読み込まれる", async () => {
     const sqlite3 = await (await import("@sqlite.org/sqlite-wasm")).default();
     const { fromSqliteWasm } = await import("./sql-database.ts");
@@ -100,6 +100,10 @@ describe("マイグレーション 2（ストーリーポイント）", () => {
     const store = new SqliteLocalStore(db);
     const [task] = await store.transaction((tx) => tx.tasks.findAllByOwner(owner));
 
-    expect(task?.toSnapshot()).toMatchObject({ title: "古いタスク", storyPoints: 1 });
+    expect(task?.toSnapshot()).toMatchObject({
+      title: "古いタスク",
+      storyPoints: 1,
+      description: "",
+    });
   });
 });
