@@ -46,9 +46,12 @@ const setup = () => {
   const clock = { now: () => new Date("2026-10-05T00:00:00Z") };
   const processedChanges = new FakeProcessedChangeStore();
   const useCase = new ApplyPushedChanges({
-    createTask: new CreateTask({ repository, clock }),
-    changeTaskStatus: new ChangeTaskStatus({ repository, clock }),
-    editTask: new EditTask({ repository, clock }),
+    useCasesAt: (at) => ({
+      createTask: new CreateTask({ repository, clock: at }),
+      changeTaskStatus: new ChangeTaskStatus({ repository, clock: at }),
+      editTask: new EditTask({ repository, clock: at }),
+    }),
+    clock,
     processedChanges,
   });
   return { useCase, repository, processedChanges };
@@ -107,5 +110,28 @@ describe("ApplyPushedChanges", () => {
       { changeId: "c-1", status: "applied" },
       { changeId: "c-2", status: "applied" },
     ]);
+  });
+
+  it("クライアントで実行された日時で再実行する（未来の日時はサーバーの現在時刻に丸める）", async () => {
+    const { useCase, repository } = setup();
+    const completedOffline: PendingChange = { ...complete, occurredAt: "2026-10-03T08:00:00Z" };
+    await useCase.execute({ ownerId: owner, changes: [create, completedOffline] });
+    expect((await repository.findAllByOwner())[0]?.toSnapshot().completedAt).toEqual(
+      new Date("2026-10-03T08:00:00Z"),
+    );
+
+    const reopen: PendingChange = {
+      changeId: "c-3",
+      command: { type: "ChangeTaskStatus", id: TASK, action: "reopen" },
+    };
+    const future: PendingChange = {
+      ...complete,
+      changeId: "c-4",
+      occurredAt: "2030-01-01T00:00:00Z",
+    };
+    await useCase.execute({ ownerId: owner, changes: [reopen, future] });
+    expect((await repository.findAllByOwner())[0]?.toSnapshot().completedAt).toEqual(
+      new Date("2026-10-05T00:00:00Z"),
+    );
   });
 });

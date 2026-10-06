@@ -1,10 +1,14 @@
 import type { OwnerId } from "@nowwhats/shared-kernel";
-import { executeCommand, type CommandUseCases } from "./execute-command.ts";
+import type { Clock } from "@nowwhats/task-management";
+import { executeCommand, fixedClock, replayTime, type CommandUseCases } from "./execute-command.ts";
 import type { ProcessedChangeStore } from "./ports.ts";
 import type { ChangeResult } from "./sync-protocol.ts";
 import type { PendingChange } from "./task-command.ts";
 
-export interface ApplyPushedChangesDeps extends CommandUseCases {
+export interface ApplyPushedChangesDeps {
+  /** 指定した Clock で動くユースケースを返す。操作を、クライアントで実行された日時で再実行するため */
+  readonly useCasesAt: (clock: Clock) => CommandUseCases;
+  readonly clock: Clock;
   readonly processedChanges: ProcessedChangeStore;
 }
 
@@ -39,7 +43,12 @@ export class ApplyPushedChanges {
   }
 
   private async apply(ownerId: OwnerId, change: PendingChange): Promise<ChangeResult> {
-    const result = await executeCommand(change.command, ownerId, this.deps);
+    const at = replayTime(change.occurredAt, this.deps.clock.now());
+    const result = await executeCommand(
+      change.command,
+      ownerId,
+      this.deps.useCasesAt(fixedClock(at)),
+    );
     return result.ok
       ? { changeId: change.changeId, status: "applied" }
       : { changeId: change.changeId, status: "rejected", error: result.error };

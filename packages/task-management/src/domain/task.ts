@@ -52,6 +52,8 @@ export interface TaskSnapshot {
   readonly priority: Priority;
   readonly dueDate: Date | null;
   readonly storyPoints: StoryPoint;
+  /** 完了した日時。完了のときだけ値を持ち、再開すると消える（実績の集計に使う） */
+  readonly completedAt: Date | null;
   /** 更新ごとに増える版。同期時の競合検出に使う（ADR 0002） */
   readonly version: number;
 }
@@ -97,6 +99,7 @@ export class Task {
       priority: params.priority ?? DEFAULT_PRIORITY,
       dueDate: params.dueDate ?? null,
       storyPoints: params.storyPoints ?? DEFAULT_STORY_POINT,
+      completedAt: null,
       version: 1,
     });
     task.record("TaskCreated", params.now);
@@ -177,9 +180,11 @@ export class Task {
     if (!ALLOWED_FROM[action].includes(this.state.status)) {
       return err({ type: "InvalidStatusTransition", from: this.state.status, action });
     }
+    const status = NEXT_STATUS[action];
     this.state = {
       ...this.state,
-      status: NEXT_STATUS[action],
+      status,
+      completedAt: status === "done" ? now : null,
       version: this.state.version + 1,
     };
     this.record(EVENT_TYPE[action], now);

@@ -54,6 +54,7 @@ const pushBody = z.object({
     .array(
       z.object({
         changeId: z.string().min(1).max(64),
+        occurredAt: z.iso.datetime({ offset: true }).optional(),
         command: z.discriminatedUnion("type", [
           createTaskBody.extend({ type: z.literal("CreateTask") }),
           z.object({ type: z.literal("ChangeTaskStatus"), id: z.string(), action: taskAction }),
@@ -86,9 +87,13 @@ export const createApp = (deps: AppDeps) => {
   const changeTaskStatus = new ChangeTaskStatus(deps);
   const listTasks = new ListTasks(deps);
   const applyPushedChanges = new ApplyPushedChanges({
-    createTask,
-    changeTaskStatus,
-    editTask: new EditTask(deps),
+    // 操作は、クライアントで実行された日時で再実行する（ADR 0006）
+    useCasesAt: (clock) => ({
+      createTask: new CreateTask({ ...deps, clock }),
+      changeTaskStatus: new ChangeTaskStatus({ ...deps, clock }),
+      editTask: new EditTask({ ...deps, clock }),
+    }),
+    clock: deps.clock,
     processedChanges: deps.processedChanges,
   });
   const pullChanges = new PullChanges({ feed: deps.changeFeed, epoch: deps.changeLogEpoch });

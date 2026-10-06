@@ -15,6 +15,7 @@
     "@fontsource/outfit": "5.3.0",
     "@nowwhats/api": "workspace:*",
     "@nowwhats/infrastructure-client": "workspace:*",
+    "@nowwhats/insights": "workspace:*",
     "@nowwhats/shared-kernel": "workspace:*",
     "@nowwhats/sync": "workspace:*",
     "@nowwhats/task-management": "workspace:*",

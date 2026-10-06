@@ -44,6 +44,7 @@ describe("EditTask", () => {
         priority: "high",
         dueDate: "2026-10-10T00:00:00.000Z",
         storyPoints: 5,
+        completedAt: null,
         version: 2,
       },
     });

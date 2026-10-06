@@ -20,6 +20,12 @@
   --nw-danger-soft: #fdecea;
   --nw-warn: #b26a00;
   --nw-ok: #1f8a5b;
+  /* 活動カレンダーの濃淡（量が多いほど濃い） */
+  --nw-seq-0: #eceef3;
+  --nw-seq-1: #c7d3f7;
+  --nw-seq-2: #8ea6ee;
+  --nw-seq-3: #5375e0;
+  --nw-seq-4: #2846b4;
   color-scheme: light;
 }
 
@@ -37,6 +43,12 @@
     --nw-danger-soft: #3a2222;
     --nw-warn: #f2b45a;
     --nw-ok: #5ccf98;
+    /* ダークでは量が多いほど明るい */
+    --nw-seq-0: #22262f;
+    --nw-seq-1: #26346a;
+    --nw-seq-2: #34519f;
+    --nw-seq-3: #5f80dd;
+    --nw-seq-4: #a3b8ff;
     color-scheme: dark;
   }
 }

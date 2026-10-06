@@ -45,6 +45,17 @@ describe("Task", () => {
     expect(task.pullEvents()).toEqual([]);
   });
 
+  it("完了すると完了日時を記録し、再開すると消す", () => {
+    const task = newTask();
+    const later = new Date("2026-10-06T09:00:00Z");
+
+    task.complete(later);
+    expect(task.toSnapshot().completedAt).toEqual(later);
+
+    task.reopen(later);
+    expect(task.toSnapshot().completedAt).toBeNull();
+  });
+
   it("canceled は reopen で todo に戻る", () => {
     const task = newTask();
     task.cancel(now);

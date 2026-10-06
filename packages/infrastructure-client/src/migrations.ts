@@ -30,6 +30,11 @@ const MIGRATIONS: readonly string[] = [
   `ALTER TABLE tasks ADD COLUMN story_points INTEGER NOT NULL DEFAULT 1;`,
   // 3: 説明文（Markdown）。既存のタスクは空
   `ALTER TABLE tasks ADD COLUMN description TEXT NOT NULL DEFAULT '';`,
+  // 4: 完了日時（実績の集計用）と、操作を実行した日時（同期時の再実行用）。既存は記録なし
+  `
+  ALTER TABLE tasks ADD COLUMN completed_at TEXT;
+  ALTER TABLE outbox ADD COLUMN occurred_at TEXT;
+  `,
 ];
 
 /** 未適用のマイグレーションを順に適用する。適用済みの数は PRAGMA user_version で管理する。 */

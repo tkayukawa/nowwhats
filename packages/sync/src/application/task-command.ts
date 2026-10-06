@@ -38,4 +38,9 @@ export type TaskCommand =
 export interface PendingChange {
   readonly changeId: string;
   readonly command: TaskCommand;
+  /**
+   * クライアントで操作を実行した日時（ISO 8601）。サーバーはこの日時で再実行する（ADR 0006）。
+   * 導入前に記録された操作には含まれない
+   */
+  readonly occurredAt?: string | undefined;
 }

@@ -1,4 +1,5 @@
 import type { OwnerId, Result } from "@nowwhats/shared-kernel";
+import type { Clock } from "@nowwhats/task-management";
 import type { ChangeTaskStatus, CreateTask, EditTask, TaskDto } from "@nowwhats/task-management";
 import type { CommandError } from "./sync-protocol.ts";
 import type { TaskCommand } from "./task-command.ts";
@@ -8,6 +9,18 @@ export interface CommandUseCases {
   readonly changeTaskStatus: Pick<ChangeTaskStatus, "execute">;
   readonly editTask: Pick<EditTask, "execute">;
 }
+
+/** 常に同じ日時を返す Clock。操作を、実行された日時で再実行するために使う */
+export const fixedClock = (at: Date): Clock => ({ now: () => at });
+
+/**
+ * 操作を再実行する日時を決める。記録された日時を使うが、未来の日時は基準の日時（現在時刻）に丸める。
+ * 端末の時計のずれで、未来の完了日時などが記録されるのを防ぐ。
+ */
+export const replayTime = (occurredAt: string | undefined, now: Date): Date => {
+  const at = occurredAt === undefined ? Number.NaN : Date.parse(occurredAt);
+  return Number.isNaN(at) || at > now.getTime() ? now : new Date(at);
+};
 
 /** 操作を対応するユースケースで実行する。クライアント・サーバーの両方で使う。 */
 export const executeCommand = (

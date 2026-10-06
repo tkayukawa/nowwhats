@@ -34,7 +34,7 @@
 ## 関係
 
 - **Capture → Task Management**: Capture は `TaskDraft` を解析し、Task Management のユースケース（`CreateTask`）を呼び出して確定する。Task Management は Capture を知らない。
-- **Task Management → Insights**: Insights は `TaskCreated` / `TaskCompleted` 等のドメインイベントを購読して読み取りモデルを更新する。Task 集約を直接参照しない。
+- **Task Management → Insights**: Insights は Task Management の公開 API（`TaskDto`）を読んで集計する読み取り専用のモデル（`packages/insights`）。現在はクライアントのローカル DB のタスク一覧から計算するため、オフラインでも表示できる。将来、件数が増えた場合はドメインイベントから読み取りモデルを組み立てる方式に移す。
 - **外部サービス → Capture**: 音声認識・LLM は `TaskDraftParser` Port の Adapter として実装し、腐敗防止層（ACL）で外部の型をドメインに持ち込まない。
 - **Identity → 各コンテキスト**: 認証サービスの利用者 ID を `OwnerId` に変換して渡す。
 
