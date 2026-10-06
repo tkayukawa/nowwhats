@@ -9,7 +9,7 @@ export type { ProcessedChangeStore, TaskChangeFeed } from "./application/ports.t
 export { ApplyPushedChanges } from "./application/apply-pushed-changes.ts";
 export type { ApplyPushedChangesDeps } from "./application/apply-pushed-changes.ts";
 export { PullChanges, PULL_LIMIT_MAX } from "./application/pull-changes.ts";
-export { executeCommand } from "./application/execute-command.ts";
+export { executeCommand, fixedClock, replayTime } from "./application/execute-command.ts";
 export type { CommandUseCases } from "./application/execute-command.ts";
 export type {
   LocalStore,

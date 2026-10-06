@@ -29,6 +29,7 @@ type TaskRow = {
   priority: string;
   due_date: string | null;
   story_points: number;
+  completed_at: string | null;
   version: number;
 };
 
@@ -58,6 +59,7 @@ const toTask = (row: TaskRow, ownerId: OwnerId): Task => {
     priority,
     dueDate: row.due_date === null ? null : new Date(row.due_date),
     storyPoints: storyPoints.value,
+    completedAt: row.completed_at === null ? null : new Date(row.completed_at),
     version: row.version,
   });
 };
@@ -85,13 +87,14 @@ class SqliteTaskRepository implements LocalTaskRepository {
   save(task: Task): Promise<void> {
     const s = task.toSnapshot();
     this.db.run(
-      `INSERT INTO tasks (id, owner_id, title, description, status, priority, due_date, story_points, version)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO tasks (id, owner_id, title, description, status, priority, due_date, story_points, completed_at, version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (id) DO UPDATE SET
          owner_id = excluded.owner_id, title = excluded.title, description = excluded.description,
          status = excluded.status,
          priority = excluded.priority, due_date = excluded.due_date,
-         story_points = excluded.story_points, version = excluded.version`,
+         story_points = excluded.story_points, completed_at = excluded.completed_at,
+         version = excluded.version`,
       [
         s.id,
         s.ownerId,
@@ -101,6 +104,7 @@ class SqliteTaskRepository implements LocalTaskRepository {
         s.priority,
         s.dueDate?.toISOString() ?? null,
         s.storyPoints,
+        s.completedAt?.toISOString() ?? null,
         s.version,
       ],
     );
@@ -147,22 +151,24 @@ class SqliteOutboxStore implements OutboxStore {
   }
 
   append(change: PendingChange): Promise<void> {
-    this.db.run("INSERT INTO outbox (change_id, command) VALUES (?, ?)", [
+    this.db.run("INSERT INTO outbox (change_id, command, occurred_at) VALUES (?, ?, ?)", [
       change.changeId,
       JSON.stringify(change.command),
+      change.occurredAt ?? null,
     ]);
     return Promise.resolve();
   }
 
   list(limit = -1): Promise<PendingChange[]> {
-    const rows = this.db.all<{ change_id: string; command: string }>(
-      "SELECT change_id, command FROM outbox ORDER BY seq LIMIT ?",
+    const rows = this.db.all<{ change_id: string; command: string; occurred_at: string | null }>(
+      "SELECT change_id, command, occurred_at FROM outbox ORDER BY seq LIMIT ?",
       [limit],
     );
     return Promise.resolve(
       rows.map((r) => ({
         changeId: r.change_id,
         command: JSON.parse(r.command) as PendingChange["command"],
+        ...(r.occurred_at !== null && { occurredAt: r.occurred_at }),
       })),
     );
   }

@@ -17,6 +17,8 @@ export interface TaskDto {
   readonly priority: Priority;
   readonly dueDate: string | null;
   readonly storyPoints: number;
+  /** ISO 8601。完了のときだけ値を持つ */
+  readonly completedAt: string | null;
   readonly version: number;
 }
 
@@ -30,6 +32,7 @@ export const toTaskDto = (task: Task): TaskDto => {
     priority: s.priority,
     dueDate: s.dueDate?.toISOString() ?? null,
     storyPoints: s.storyPoints,
+    completedAt: s.completedAt?.toISOString() ?? null,
     version: s.version,
   };
 };
@@ -58,6 +61,8 @@ export const fromTaskDto = (dto: TaskDto, ownerId: OwnerId): Task | null => {
     priority: dto.priority,
     dueDate: dto.dueDate === null ? null : new Date(dto.dueDate),
     storyPoints: storyPoints.value,
+    // 完了日時の導入前に保存された DTO には completedAt がないため、記録なしとして扱う
+    completedAt: typeof dto.completedAt === "string" ? new Date(dto.completedAt) : null,
     version: dto.version,
   });
 };

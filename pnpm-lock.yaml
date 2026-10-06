@@ -232,6 +232,9 @@ importers:
       '@nowwhats/infrastructure-client':
         specifier: workspace:*
         version: link:../../packages/infrastructure-client
+      '@nowwhats/insights':
+        specifier: workspace:*
+        version: link:../../packages/insights
       '@nowwhats/shared-kernel':
         specifier: workspace:*
         version: link:../../packages/shared-kernel
@@ -303,6 +306,12 @@ importers:
       '@nowwhats/sync':
         specifier: workspace:*
         version: link:../sync
+      '@nowwhats/task-management':
+        specifier: workspace:*
+        version: link:../task-management
+
+  packages/insights:
+    dependencies:
       '@nowwhats/task-management':
         specifier: workspace:*
         version: link:../task-management

@@ -71,6 +71,7 @@ packages/
     src/testing/       # テスト用の部品（公開 API には含めない）
     src/index.ts       # 公開 API（他パッケージはここからのみ import する）
   sync/                # 同期の取り決め（操作・結果の型）とユースケース（ADR 0006）
+  insights/            # 実績（進捗・成果）の集計。タスク一覧から計算する読み取り専用のモデル
   infrastructure-server/ # サーバー用 Adapter（現時点はメモリ上の Repository・変更ログ・処理済み記録）
   infrastructure-client/ # クライアント用 Adapter（SQLite のローカル保存・マイグレーション・UUIDv7）
 apps/

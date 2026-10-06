@@ -17,16 +17,21 @@ import { SqliteLocalStore } from "./sqlite-local-store.ts";
 import { createTestDatabase } from "./test-support.ts";
 import { uuidv7 } from "./uuidv7.ts";
 
-const clock = { now: () => new Date("2026-10-05T00:00:00Z") };
+// サーバーの時計。テストの中で進められるようにする
+const serverTime = { now: new Date("2026-10-05T00:00:00Z") };
+const clock = { now: () => serverTime.now };
 
 /** サーバー（メモリ実装）と、それに接続する SyncApi を作る。online=false で通信失敗を再現する */
 const createServer = (epoch = "epoch-1") => {
   const repository = new InMemoryTaskRepository();
   const owner = OwnerId.of("dev-user");
   const push = new ApplyPushedChanges({
-    createTask: new CreateTask({ repository, clock }),
-    changeTaskStatus: new ChangeTaskStatus({ repository, clock }),
-    editTask: new EditTask({ repository, clock }),
+    useCasesAt: (at) => ({
+      createTask: new CreateTask({ repository, clock: at }),
+      changeTaskStatus: new ChangeTaskStatus({ repository, clock: at }),
+      editTask: new EditTask({ repository, clock: at }),
+    }),
+    clock,
     processedChanges: new InMemoryProcessedChangeStore(),
   });
   const pull = new PullChanges({ feed: repository, epoch });
@@ -46,12 +51,15 @@ const createServer = (epoch = "epoch-1") => {
 /** クライアント 1 台分（ローカル DB + 操作実行 + 同期）。connectTo で接続先のサーバーを差し替えられる */
 const createClient = async (server: ReturnType<typeof createServer>) => {
   const store = new SqliteLocalStore(await createTestDatabase());
-  const context = { ownerId: OwnerId.of("local"), clock };
+  // 端末の時計。テストの中で進められるようにする
+  const deviceTime = { now: new Date("2026-10-05T00:00:00Z") };
+  const context = { ownerId: OwnerId.of("local"), clock: { now: () => deviceTime.now } };
   const network = { online: true };
   const exec = new ExecuteLocalCommand({ store, context, newChangeId: uuidv7 });
   let sync = new SynchronizeWithServer({ store, api: server.connect(network), context });
   return {
     network,
+    deviceTime,
     connectTo: (next: ReturnType<typeof createServer>) => {
       sync = new SynchronizeWithServer({ store, api: next.connect(network), context });
     },
@@ -194,5 +202,30 @@ describe("同期（クライアント 2 台 + サーバー）", () => {
         storyPoints: 3,
       });
     }
+  });
+
+  it("オフラインで完了したタスクは、同期した日時ではなく完了した日時が記録される", async () => {
+    const server = createServer();
+    const a = await createClient(server);
+    const id = uuidv7();
+    await a.run({ type: "CreateTask", id, title: "請求書を送る" });
+    await a.sync();
+
+    a.network.online = false;
+    a.deviceTime.now = new Date("2026-10-05T09:30:00Z");
+    await a.run({ type: "ChangeTaskStatus", id, action: "complete" });
+
+    // 2 日後にオンラインに戻って同期する
+    serverTime.now = new Date("2026-10-07T12:00:00Z");
+    a.deviceTime.now = serverTime.now;
+    a.network.online = true;
+    await a.sync();
+
+    const b = await createClient(server);
+    await b.sync();
+    for (const client of [a, b]) {
+      expect((await client.tasks())[0]?.completedAt).toBe("2026-10-05T09:30:00.000Z");
+    }
+    serverTime.now = new Date("2026-10-05T00:00:00Z");
   });
 });

@@ -1,5 +1,6 @@
 import { fromTaskDto, TaskId } from "@nowwhats/task-management";
 import type { LocalStore, LocalTransaction, SyncApi } from "./client-ports.ts";
+import { fixedClock, replayTime } from "./execute-command.ts";
 import { executeLocally, type ClientContext } from "./execute-local-command.ts";
 import type { CommandError } from "./sync-protocol.ts";
 import type { PendingChange } from "./task-command.ts";
@@ -115,10 +116,14 @@ export class SynchronizeWithServer {
         await tx.tasks.save(task);
       }
     }
-    // 未送信の操作を再実行する。失敗したものは次回の push でサーバーに差し戻される
+    // 未送信の操作を、実行された日時で再実行する。失敗したものは次回の push でサーバーに差し戻される
+    const now = this.deps.context.clock.now();
     for (const change of await tx.outbox.list()) {
       if (taskIds.has(change.command.id)) {
-        await executeLocally(tx, change.command, this.deps.context);
+        await executeLocally(tx, change.command, {
+          ...this.deps.context,
+          clock: fixedClock(replayTime(change.occurredAt, now)),
+        });
       }
     }
   }

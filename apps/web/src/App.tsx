@@ -4,6 +4,7 @@ import { useLocalTasks } from "./local/use-local-tasks.ts";
 import { AppShell, type View } from "./ui/app-shell.tsx";
 import { CaptureForm } from "./ui/capture-form.tsx";
 import { DueFilters } from "./ui/due-filters.tsx";
+import { InsightsView } from "./ui/insights/insights-view.tsx";
 import { ComingSoon, RejectionNotice, StorageWarning } from "./ui/notices.tsx";
 import { SyncBadge } from "./ui/sync-badge.tsx";
 import { TaskDetail } from "./ui/task-detail.tsx";
@@ -60,11 +61,7 @@ export const App = () => {
           )}
         </>
       )}
-      {view === "insights" && (
-        <ComingSoon title="実績">
-          完了したポイントの推移や活動カレンダーなど、進捗と成果を振り返れるようにする予定です。
-        </ComingSoon>
-      )}
+      {view === "insights" && <InsightsView tasks={state.tasks} today={today} />}
       {view === "settings" && (
         <ComingSoon title="設定">
           表示やアカウント、データの管理などの設定をここに置く予定です。

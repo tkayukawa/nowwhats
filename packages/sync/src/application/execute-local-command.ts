@@ -7,7 +7,7 @@ import {
   type TaskDto,
 } from "@nowwhats/task-management";
 import type { LocalStore, LocalTransaction } from "./client-ports.ts";
-import { executeCommand } from "./execute-command.ts";
+import { executeCommand, fixedClock } from "./execute-command.ts";
 import type { CommandError } from "./sync-protocol.ts";
 import type { TaskCommand } from "./task-command.ts";
 
@@ -47,10 +47,18 @@ export class ExecuteLocalCommand {
   }
 
   execute(command: TaskCommand): Promise<Result<TaskDto, CommandError>> {
+    const now = this.deps.context.clock.now();
     return this.deps.store.transaction(async (tx) => {
-      const result = await executeLocally(tx, command, this.deps.context);
+      const result = await executeLocally(tx, command, {
+        ...this.deps.context,
+        clock: fixedClock(now),
+      });
       if (result.ok) {
-        await tx.outbox.append({ changeId: this.deps.newChangeId(), command });
+        await tx.outbox.append({
+          changeId: this.deps.newChangeId(),
+          command,
+          occurredAt: now.toISOString(),
+        });
       }
       return result;
     });
