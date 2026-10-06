@@ -10,6 +10,7 @@ import type {
 } from "@nowwhats/sync";
 import {
   PRIORITIES,
+  StoryPoint,
   Task,
   TASK_STATUSES,
   TaskId,
@@ -25,6 +26,7 @@ type TaskRow = {
   status: string;
   priority: string;
   due_date: string | null;
+  story_points: number;
   version: number;
 };
 
@@ -33,7 +35,8 @@ const toTask = (row: TaskRow, ownerId: OwnerId): Task => {
   const title = TaskTitle.create(row.title);
   const status = TASK_STATUSES.find((s) => s === row.status);
   const priority = PRIORITIES.find((p) => p === row.priority);
-  if (!id.ok || !title.ok || status === undefined || priority === undefined) {
+  const storyPoints = StoryPoint.parse(row.story_points);
+  if (!id.ok || !title.ok || status === undefined || priority === undefined || !storyPoints.ok) {
     throw new Error(`corrupted local task row: ${row.id}`);
   }
   return Task.reconstruct({
@@ -43,6 +46,7 @@ const toTask = (row: TaskRow, ownerId: OwnerId): Task => {
     status,
     priority,
     dueDate: row.due_date === null ? null : new Date(row.due_date),
+    storyPoints: storyPoints.value,
     version: row.version,
   });
 };
@@ -70,12 +74,22 @@ class SqliteTaskRepository implements LocalTaskRepository {
   save(task: Task): Promise<void> {
     const s = task.toSnapshot();
     this.db.run(
-      `INSERT INTO tasks (id, owner_id, title, status, priority, due_date, version)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO tasks (id, owner_id, title, status, priority, due_date, story_points, version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (id) DO UPDATE SET
          owner_id = excluded.owner_id, title = excluded.title, status = excluded.status,
-         priority = excluded.priority, due_date = excluded.due_date, version = excluded.version`,
-      [s.id, s.ownerId, s.title, s.status, s.priority, s.dueDate?.toISOString() ?? null, s.version],
+         priority = excluded.priority, due_date = excluded.due_date,
+         story_points = excluded.story_points, version = excluded.version`,
+      [
+        s.id,
+        s.ownerId,
+        s.title,
+        s.status,
+        s.priority,
+        s.dueDate?.toISOString() ?? null,
+        s.storyPoints,
+        s.version,
+      ],
     );
     return Promise.resolve();
   }

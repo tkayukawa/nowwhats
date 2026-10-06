@@ -26,6 +26,8 @@ const MIGRATIONS: readonly string[] = [
     value TEXT NOT NULL
   );
   `,
+  // 2: ストーリーポイント。既存のタスクは既定値 1 とする
+  `ALTER TABLE tasks ADD COLUMN story_points INTEGER NOT NULL DEFAULT 1;`,
 ];
 
 /** 未適用のマイグレーションを順に適用する。適用済みの数は PRAGMA user_version で管理する。 */

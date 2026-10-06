@@ -37,6 +37,8 @@ const createTaskBody = z.object({
   title: z.string(),
   priority: z.enum(PRIORITIES).optional(),
   dueDate: z.iso.datetime({ offset: true }).nullable().optional(),
+  // 値の範囲（目盛り）はドメインで検証する
+  storyPoints: z.number().int().optional(),
 });
 
 const taskAction = z.enum(["start", "complete", "cancel", "reopen"]);
@@ -102,6 +104,7 @@ export const createApp = (deps: AppDeps) => {
           ...(body.dueDate !== undefined && {
             dueDate: body.dueDate === null ? null : new Date(body.dueDate),
           }),
+          ...(body.storyPoints !== undefined && { storyPoints: body.storyPoints }),
         });
         if (!result.ok) {
           const { status, body: errorBody } = toHttpError(result.error);

@@ -78,6 +78,28 @@ describe("SqliteLocalStore", () => {
     const db = await createTestDatabase();
 
     expect(() => migrate(db)).not.toThrow();
-    expect(db.all<{ user_version: number }>("PRAGMA user_version")).toEqual([{ user_version: 1 }]);
+    expect(db.all<{ user_version: number }>("PRAGMA user_version")).toEqual([{ user_version: 2 }]);
+  });
+});
+
+describe("マイグレーション 2（ストーリーポイント）", () => {
+  it("ポイント導入前に保存されたタスクは 1 ポイントとして読み込まれる", async () => {
+    const sqlite3 = await (await import("@sqlite.org/sqlite-wasm")).default();
+    const { fromSqliteWasm } = await import("./sql-database.ts");
+    const db = fromSqliteWasm(new sqlite3.oo1.DB(":memory:", "c"));
+    // バージョン 1 のスキーマとデータを再現する
+    db.run(`CREATE TABLE tasks (id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, title TEXT NOT NULL,
+      status TEXT NOT NULL, priority TEXT NOT NULL, due_date TEXT, version INTEGER NOT NULL);
+      CREATE TABLE server_tasks (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+      CREATE TABLE outbox (seq INTEGER PRIMARY KEY AUTOINCREMENT, change_id TEXT NOT NULL UNIQUE, command TEXT NOT NULL);
+      CREATE TABLE sync_state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      PRAGMA user_version = 1;`);
+    db.run("INSERT INTO tasks VALUES (?, 'local', '古いタスク', 'todo', 'medium', NULL, 1)", [ID]);
+
+    migrate(db);
+    const store = new SqliteLocalStore(db);
+    const [task] = await store.transaction((tx) => tx.tasks.findAllByOwner(owner));
+
+    expect(task?.toSnapshot()).toMatchObject({ title: "古いタスク", storyPoints: 1 });
   });
 });

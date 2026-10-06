@@ -7,6 +7,8 @@ export const errorMessage = (type: string | null): string => {
       return "タスクが見つかりません";
     case "InvalidStatusTransition":
       return "この状態からは変更できません";
+    case "StoryPointInvalid":
+      return "ポイントの値が正しくありません";
     case "TaskAlreadyExists":
       return "同じタスクがすでに登録されています";
     default:

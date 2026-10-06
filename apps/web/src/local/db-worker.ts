@@ -71,7 +71,7 @@ const handle = async (request: WorkerRequest): Promise<unknown> => {
     case "listTasks":
       return snapshot();
     case "createTask":
-      return run({ type: "CreateTask", id: uuidv7(), title: request.title });
+      return run({ type: "CreateTask", id: uuidv7(), ...request.task });
     case "changeStatus":
       return run({ type: "ChangeTaskStatus", id: request.id, action: request.action });
     case "sync":

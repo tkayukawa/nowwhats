@@ -8,6 +8,8 @@ export { TASK_STATUSES } from "./domain/task-status.ts";
 export type { TaskStatus } from "./domain/task-status.ts";
 export { PRIORITIES, DEFAULT_PRIORITY } from "./domain/priority.ts";
 export type { Priority } from "./domain/priority.ts";
+export { STORY_POINT_SCALE, DEFAULT_STORY_POINT, StoryPoint } from "./domain/story-point.ts";
+export type { StoryPointError } from "./domain/story-point.ts";
 export type { TaskEvent } from "./domain/task-events.ts";
 export type { TaskRepository } from "./domain/task-repository.ts";
 export { CreateTask } from "./application/create-task.ts";

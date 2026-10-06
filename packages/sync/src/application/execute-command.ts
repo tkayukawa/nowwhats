@@ -24,6 +24,7 @@ export const executeCommand = (
         ...(command.dueDate !== undefined && {
           dueDate: command.dueDate === null ? null : new Date(command.dueDate),
         }),
+        ...(command.storyPoints !== undefined && { storyPoints: command.storyPoints }),
       });
     case "ChangeTaskStatus":
       return useCases.changeTaskStatus.execute({ ownerId, id: command.id, action: command.action });

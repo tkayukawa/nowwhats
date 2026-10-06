@@ -12,6 +12,8 @@ export type TaskCommand =
       readonly priority?: Priority | undefined;
       /** ISO 8601 文字列。null は期限なし */
       readonly dueDate?: string | null | undefined;
+      /** 未指定なら既定値。ポイント導入前に記録された操作には含まれない */
+      readonly storyPoints?: number | undefined;
     }
   | {
       readonly type: "ChangeTaskStatus";

@@ -65,6 +65,11 @@ describe("API", () => {
     const res = await app.request("/api/tasks", post({ id: ID, title: "a", priority: "x" }));
 
     expect(res.status).toBe(400);
+    const invalidPoints = await app.request(
+      "/api/tasks",
+      post({ id: ID, title: "a", storyPoints: 4 }),
+    );
+    expect(invalidPoints.status).toBe(400);
   });
 
   it("利用者を特定できなければ 401 を返す", async () => {

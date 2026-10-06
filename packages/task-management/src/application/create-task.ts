@@ -1,5 +1,6 @@
 import { err, ok, type OwnerId, type Result } from "@nowwhats/shared-kernel";
 import type { Priority } from "../domain/priority.ts";
+import { StoryPoint, type StoryPointError } from "../domain/story-point.ts";
 import { Task } from "../domain/task.ts";
 import { TaskId, type TaskIdError } from "../domain/task-id.ts";
 import type { TaskRepository } from "../domain/task-repository.ts";
@@ -14,9 +15,12 @@ export interface CreateTaskInput {
   readonly title: string;
   readonly priority?: Priority;
   readonly dueDate?: Date | null;
+  /** 未指定なら既定値（DEFAULT_STORY_POINT） */
+  readonly storyPoints?: number;
 }
 
-export type CreateTaskError = TaskIdError | TaskTitleError | { readonly type: "TaskAlreadyExists" };
+export type CreateTaskError =
+  TaskIdError | TaskTitleError | StoryPointError | { readonly type: "TaskAlreadyExists" };
 
 export interface CreateTaskDeps {
   readonly repository: TaskRepository;
@@ -39,6 +43,11 @@ export class CreateTask {
     if (!title.ok) {
       return title;
     }
+    const storyPoints =
+      input.storyPoints === undefined ? null : StoryPoint.parse(input.storyPoints);
+    if (storyPoints !== null && !storyPoints.ok) {
+      return storyPoints;
+    }
     if ((await this.deps.repository.findById(input.ownerId, id.value)) !== null) {
       return err({ type: "TaskAlreadyExists" });
     }
@@ -48,6 +57,7 @@ export class CreateTask {
       title: title.value,
       ...(input.priority !== undefined && { priority: input.priority }),
       ...(input.dueDate !== undefined && { dueDate: input.dueDate }),
+      ...(storyPoints !== null && { storyPoints: storyPoints.value }),
       now: this.deps.clock.now(),
     });
     await this.deps.repository.save(task);

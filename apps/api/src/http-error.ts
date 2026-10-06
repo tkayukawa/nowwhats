@@ -12,6 +12,7 @@ export const toHttpError = (error: DomainError): HttpError => {
   switch (error.type) {
     case "TaskIdInvalid":
     case "TaskTitleEmpty":
+    case "StoryPointInvalid":
       return { status: 400, body: { error } };
     case "TaskNotFound":
       return { status: 404, body: { error } };
