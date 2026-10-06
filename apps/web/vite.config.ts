@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 
@@ -30,7 +31,7 @@ const precacheManifest = (): Plugin => ({
 const proxy = { "/api": "http://127.0.0.1:8787" };
 
 export default defineConfig({
-  plugins: [react(), precacheManifest()],
+  plugins: [react(), tailwindcss(), precacheManifest()],
   server: { proxy },
   preview: { proxy },
   // sqlite-wasm は .wasm を相対 URL で読み込むため、事前バンドルの対象から外す（パッケージの README の指示）

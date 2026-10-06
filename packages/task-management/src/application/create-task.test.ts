@@ -21,6 +21,7 @@ describe("CreateTask", () => {
         status: "todo",
         priority: "medium",
         dueDate: null,
+        storyPoints: 1,
         version: 1,
       },
     });
@@ -51,5 +52,15 @@ describe("CreateTask", () => {
     const result = await useCase.execute({ ownerId: OWNER, id: uuid(1), title: "b" });
 
     expect(result).toEqual({ ok: false, error: { type: "TaskAlreadyExists" } });
+  });
+
+  it("ストーリーポイントは目盛りの値だけ受け付け、未指定なら 1 にする", async () => {
+    const { useCase } = setup();
+
+    const five = await useCase.execute({ ownerId: OWNER, id: uuid(1), title: "a", storyPoints: 5 });
+    const four = await useCase.execute({ ownerId: OWNER, id: uuid(2), title: "b", storyPoints: 4 });
+
+    expect(five).toMatchObject({ ok: true, value: { storyPoints: 5 } });
+    expect(four).toEqual({ ok: false, error: { type: "StoryPointInvalid" } });
   });
 });

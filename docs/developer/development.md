@@ -77,7 +77,15 @@ apps/
   api/                 # Hono による HTTP API。src/main.ts が Composition Root
   web/                 # Vite + React の Web クライアント
     src/local/         # ローカル DB と同期を動かす Web Worker と、その呼び出し
+    src/ui/            # 画面の部品（Tailwind CSS）
+    src/task-view.ts   # 一覧の並び順・絞り込み・期限表示の判断（部品から切り離してテストする）
 ```
+
+### 画面のスタイル（Tailwind CSS）
+
+- 色とフォントは `apps/web/src/styles.css` で CSS 変数（`--nw-*`）として定義し、`@theme inline` で Tailwind の色名（`bg-surface`、`text-muted`、`text-accent` など）に対応づけている。部品では色の値を直接書かず、この色名を使う。
+- ダークモードは端末の設定（`prefers-color-scheme`）に従う。変数の値だけを切り替えるので、部品側に `dark:` の指定は不要。
+- 日本語は端末のフォントを使い、ロゴと数字は同梱の Outfit（`@fontsource/outfit`）を使う（`font-mark`）。
 
 ### クライアント（Web）の構成
 

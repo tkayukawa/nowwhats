@@ -1,0 +1,72 @@
+@import "tailwindcss";
+@import "@fontsource/outfit/500.css";
+@import "@fontsource/outfit/600.css";
+
+/*
+ * 色とフォントの定義。画面の部品は Tailwind のクラス（bg-surface, text-muted など）経由で使う。
+ * ダークモードは端末の設定（prefers-color-scheme）に従う。
+ */
+:root {
+  --nw-bg: #f7f8fa;
+  --nw-surface: #ffffff;
+  --nw-fg: #1b1f27;
+  --nw-muted: #6b7280;
+  --nw-faint: #e6e8ee;
+  --nw-accent: #3358d4;
+  --nw-accent-soft: #e8edfc;
+  --nw-brand: #a6e22e; /* ロゴ・完了マーク（両テーマ共通） */
+  --nw-on-brand: #1b1f27;
+  --nw-danger: #c9372c;
+  --nw-danger-soft: #fdecea;
+  --nw-warn: #b26a00;
+  --nw-ok: #1f8a5b;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --nw-bg: #12141a;
+    --nw-surface: #1a1d25;
+    --nw-fg: #e8eaf0;
+    --nw-muted: #9096a3;
+    --nw-faint: #2a2e39;
+    --nw-accent: #8aa4ff;
+    --nw-accent-soft: #232b45;
+    --nw-on-brand: #12141a;
+    --nw-danger: #ff8a7f;
+    --nw-danger-soft: #3a2222;
+    --nw-warn: #f2b45a;
+    --nw-ok: #5ccf98;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--nw-bg);
+  --color-surface: var(--nw-surface);
+  --color-fg: var(--nw-fg);
+  --color-muted: var(--nw-muted);
+  --color-faint: var(--nw-faint);
+  --color-accent: var(--nw-accent);
+  --color-accent-soft: var(--nw-accent-soft);
+  --color-brand: var(--nw-brand);
+  --color-on-brand: var(--nw-on-brand);
+  --color-danger: var(--nw-danger);
+  --color-danger-soft: var(--nw-danger-soft);
+  --color-warn: var(--nw-warn);
+  --color-ok: var(--nw-ok);
+  /* 日本語は端末のフォント、ロゴと数字は同梱の Outfit */
+  --font-sans:
+    "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Noto Sans JP", "Meiryo",
+    system-ui, sans-serif;
+  --font-mark: "Outfit", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-bg font-sans text-[15px] leading-relaxed text-fg;
+  }
+  :focus-visible {
+    @apply rounded-md outline-2 outline-offset-2 outline-accent;
+  }
+}

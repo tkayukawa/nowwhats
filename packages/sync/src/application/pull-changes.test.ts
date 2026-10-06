@@ -13,6 +13,7 @@ const change = (seq: number): TaskChange => ({
     status: "todo",
     priority: "medium",
     dueDate: null,
+    storyPoints: 1,
     version: 1,
   },
 });

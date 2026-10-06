@@ -2,7 +2,7 @@ import type { TaskAction, TaskDto } from "@nowwhats/task-management";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorMessage } from "../error-message.ts";
 import { LocalClient } from "./local-client.ts";
-import type { RejectedChange } from "./protocol.ts";
+import type { NewTask, RejectedChange } from "./protocol.ts";
 
 const SYNC_INTERVAL_MS = 30_000;
 const SYNC_DEBOUNCE_MS = 300;
@@ -84,8 +84,8 @@ export const useLocalTasks = () => {
   }, [refresh, sync, scheduleSync]);
 
   /** 失敗時は利用者向けのエラー文言を返す */
-  const createTask = async (title: string): Promise<string | null> => {
-    const { error } = await getClient().request({ type: "createTask", title });
+  const createTask = async (task: NewTask): Promise<string | null> => {
+    const { error } = await getClient().request({ type: "createTask", task });
     await refresh();
     if (error !== null) return errorMessage(error);
     scheduleSync();

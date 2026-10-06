@@ -1,5 +1,6 @@
 import { err, ok, type OwnerId, type Result } from "@nowwhats/shared-kernel";
 import { DEFAULT_PRIORITY, type Priority } from "./priority.ts";
+import { DEFAULT_STORY_POINT, type StoryPoint } from "./story-point.ts";
 import type { TaskEvent } from "./task-events.ts";
 import type { TaskId } from "./task-id.ts";
 import type { TaskStatus } from "./task-status.ts";
@@ -48,6 +49,7 @@ export interface TaskSnapshot {
   readonly status: TaskStatus;
   readonly priority: Priority;
   readonly dueDate: Date | null;
+  readonly storyPoints: StoryPoint;
   /** 更新ごとに増える版。同期時の競合検出に使う（ADR 0002） */
   readonly version: number;
 }
@@ -67,6 +69,7 @@ export class Task {
     title: TaskTitle;
     priority?: Priority;
     dueDate?: Date | null;
+    storyPoints?: StoryPoint;
     now: Date;
   }): Task {
     const task = new Task({
@@ -76,6 +79,7 @@ export class Task {
       status: "todo",
       priority: params.priority ?? DEFAULT_PRIORITY,
       dueDate: params.dueDate ?? null,
+      storyPoints: params.storyPoints ?? DEFAULT_STORY_POINT,
       version: 1,
     });
     task.record("TaskCreated", params.now);

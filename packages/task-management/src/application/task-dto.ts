@@ -1,5 +1,6 @@
 import type { OwnerId } from "@nowwhats/shared-kernel";
 import type { Priority } from "../domain/priority.ts";
+import { DEFAULT_STORY_POINT, StoryPoint } from "../domain/story-point.ts";
 import { Task } from "../domain/task.ts";
 import { TaskId } from "../domain/task-id.ts";
 import type { TaskStatus } from "../domain/task-status.ts";
@@ -12,6 +13,7 @@ export interface TaskDto {
   readonly status: TaskStatus;
   readonly priority: Priority;
   readonly dueDate: string | null;
+  readonly storyPoints: number;
   readonly version: number;
 }
 
@@ -23,6 +25,7 @@ export const toTaskDto = (task: Task): TaskDto => {
     status: s.status,
     priority: s.priority,
     dueDate: s.dueDate?.toISOString() ?? null,
+    storyPoints: s.storyPoints,
     version: s.version,
   };
 };
@@ -31,7 +34,11 @@ export const toTaskDto = (task: Task): TaskDto => {
 export const fromTaskDto = (dto: TaskDto, ownerId: OwnerId): Task | null => {
   const id = TaskId.parse(dto.id);
   const title = TaskTitle.create(dto.title);
-  if (!id.ok || !title.ok) {
+  // ポイント導入前に保存された DTO には storyPoints がないため、既定値として扱う
+  const storyPoints = StoryPoint.parse(
+    typeof dto.storyPoints === "number" ? dto.storyPoints : DEFAULT_STORY_POINT,
+  );
+  if (!id.ok || !title.ok || !storyPoints.ok) {
     return null;
   }
   return Task.reconstruct({
@@ -41,6 +48,7 @@ export const fromTaskDto = (dto: TaskDto, ownerId: OwnerId): Task | null => {
     status: dto.status,
     priority: dto.priority,
     dueDate: dto.dueDate === null ? null : new Date(dto.dueDate),
+    storyPoints: storyPoints.value,
     version: dto.version,
   });
 };

@@ -1,11 +1,19 @@
 import type { RejectedChange, SyncReport } from "@nowwhats/sync";
-import type { TaskAction, TaskDto } from "@nowwhats/task-management";
+import type { Priority, TaskAction, TaskDto } from "@nowwhats/task-management";
+
+export interface NewTask {
+  readonly title: string;
+  readonly priority: Priority;
+  /** ISO 8601。null は期限なし */
+  readonly dueDate: string | null;
+  readonly storyPoints: number;
+}
 
 /** メインスレッド → Worker への要求 */
 export type WorkerRequest =
   | { readonly type: "init" }
   | { readonly type: "listTasks" }
-  | { readonly type: "createTask"; readonly title: string }
+  | { readonly type: "createTask"; readonly task: NewTask }
   | { readonly type: "changeStatus"; readonly id: string; readonly action: TaskAction }
   | { readonly type: "sync" };
 

@@ -26,9 +26,23 @@ describe("fromTaskDto", () => {
       status: "todo",
       priority: "medium",
       dueDate: null,
+      storyPoints: 1,
       version: 1,
     };
 
     expect(fromTaskDto(dto, OWNER)).toBeNull();
+  });
+
+  it("storyPoints がない古い DTO は既定値 1 として復元する", () => {
+    const dto = {
+      id: uuid(1),
+      title: "a",
+      status: "todo",
+      priority: "medium",
+      dueDate: null,
+      version: 1,
+    } as unknown as TaskDto;
+
+    expect(fromTaskDto(dto, OWNER)?.toSnapshot().storyPoints).toBe(1);
   });
 });
