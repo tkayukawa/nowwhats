@@ -9,6 +9,8 @@ export const errorMessage = (type: string | null): string => {
       return "この状態からは変更できません";
     case "StoryPointInvalid":
       return "ポイントの値が正しくありません";
+    case "TaskDescriptionTooLong":
+      return "説明文が長すぎます（20,000 文字まで）";
     case "TaskAlreadyExists":
       return "同じタスクがすでに登録されています";
     default:

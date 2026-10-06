@@ -23,4 +23,11 @@ export interface TaskReopened extends TaskEventBase {
   readonly type: "TaskReopened";
 }
 
-export type TaskEvent = TaskCreated | TaskStarted | TaskCompleted | TaskCanceled | TaskReopened;
+export interface TaskEdited extends TaskEventBase {
+  readonly type: "TaskEdited";
+  /** 値が変わった項目 */
+  readonly fields: readonly ("title" | "description" | "priority" | "dueDate" | "storyPoints")[];
+}
+
+export type TaskEvent =
+  TaskCreated | TaskStarted | TaskCompleted | TaskCanceled | TaskReopened | TaskEdited;

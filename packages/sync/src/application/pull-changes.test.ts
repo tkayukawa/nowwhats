@@ -10,6 +10,7 @@ const change = (seq: number): TaskChange => ({
   task: {
     id: `0199b1a0-0000-7000-8000-${String(seq).padStart(12, "0")}`,
     title: String(seq),
+    description: "",
     status: "todo",
     priority: "medium",
     dueDate: null,

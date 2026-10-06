@@ -2,6 +2,7 @@ import { OwnerId } from "@nowwhats/shared-kernel";
 import {
   ChangeTaskStatus,
   CreateTask,
+  EditTask,
   type Task,
   type TaskId,
   type TaskRepository,
@@ -47,6 +48,7 @@ const setup = () => {
   const useCase = new ApplyPushedChanges({
     createTask: new CreateTask({ repository, clock }),
     changeTaskStatus: new ChangeTaskStatus({ repository, clock }),
+    editTask: new EditTask({ repository, clock }),
     processedChanges,
   });
   return { useCase, repository, processedChanges };

@@ -26,11 +26,18 @@ export const syncLabel = (s: LocalTasksState): string => {
   return "同期済み";
 };
 
+const rejectedWhat = (command: RejectedChange["change"]["command"]): string => {
+  switch (command.type) {
+    case "CreateTask":
+      return "の登録";
+    case "ChangeTaskStatus":
+      return `の${ACTION_LABEL[command.action]}`;
+    case "EditTask":
+      return "の編集";
+  }
+};
+
 export const rejectionLabel = (r: RejectedChange): string => {
   const target = r.title === null ? "タスク" : `「${r.title}」`;
-  const what =
-    r.change.command.type === "CreateTask"
-      ? "の登録"
-      : `の${ACTION_LABEL[r.change.command.action]}`;
-  return `${target}${what}は、他の端末での変更と競合したため取り消されました（${errorMessage(r.error.type)}）`;
+  return `${target}${rejectedWhat(r.change.command)}は、他の端末での変更と競合したため取り消されました（${errorMessage(r.error.type)}）`;
 };

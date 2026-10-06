@@ -70,3 +70,49 @@
     @apply rounded-md outline-2 outline-offset-2 outline-accent;
   }
 }
+
+/* Markdown の表示（詳細パネルの説明文） */
+@layer components {
+  .md > :first-child {
+    margin-top: 0;
+  }
+  .md :is(h1, h2, h3, h4) {
+    @apply mt-4 mb-1.5 text-base font-bold;
+  }
+  .md :is(p, ul, ol, table, pre, blockquote) {
+    @apply mb-2.5;
+  }
+  .md ul {
+    @apply list-disc pl-5;
+  }
+  .md ol {
+    @apply list-decimal pl-5;
+  }
+  .md li:has(> input[type="checkbox"]) {
+    @apply list-none;
+  }
+  .md input[type="checkbox"] {
+    @apply mr-1.5 -ml-5 align-middle;
+  }
+  .md a {
+    @apply text-accent underline underline-offset-2;
+  }
+  .md code {
+    @apply rounded bg-faint px-1 font-mono text-[0.85em];
+  }
+  .md pre {
+    @apply overflow-x-auto rounded-lg bg-faint px-3 py-2.5;
+  }
+  .md pre code {
+    @apply bg-transparent p-0;
+  }
+  .md blockquote {
+    @apply border-l-[3px] border-faint pl-3 text-muted;
+  }
+  .md table {
+    @apply block overflow-x-auto text-sm;
+  }
+  .md :is(th, td) {
+    @apply border-b border-faint px-2 py-1 text-left;
+  }
+}

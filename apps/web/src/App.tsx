@@ -6,14 +6,20 @@ import { CaptureForm } from "./ui/capture-form.tsx";
 import { DueFilters } from "./ui/due-filters.tsx";
 import { ComingSoon, RejectionNotice, StorageWarning } from "./ui/notices.tsx";
 import { SyncBadge } from "./ui/sync-badge.tsx";
+import { TaskDetail } from "./ui/task-detail.tsx";
 import { TaskList } from "./ui/task-list.tsx";
 
 export const App = () => {
-  const { state, createTask, changeStatus, dismissRejections } = useLocalTasks();
+  const { state, createTask, changeStatus, editTask, dismissRejections } = useLocalTasks();
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState<View>("tasks");
   const [filter, setFilter] = useState<DueFilter>("all");
   const [actionError, setActionError] = useState<string | null>(null);
   const today = new Date();
+  // 同期で消えたタスクを開いていた場合は、パネルを閉じる
+  const selected = state.tasks.find((t) => t.id === selectedId) ?? null;
+  const handleAction = (id: string, action: Parameters<typeof changeStatus>[1]) =>
+    void changeStatus(id, action).then(setActionError);
 
   return (
     <AppShell
@@ -39,8 +45,19 @@ export const App = () => {
           <TaskList
             tasks={state.tasks.filter((t) => matchesDueFilter(t, filter, today))}
             today={today}
-            onAction={(id, action) => void changeStatus(id, action).then(setActionError)}
+            selectedId={selectedId}
+            onAction={handleAction}
+            onOpen={setSelectedId}
           />
+          {selected !== null && (
+            <TaskDetail
+              task={selected}
+              today={today}
+              onEdit={(changes) => editTask(selected.id, changes)}
+              onAction={(action) => handleAction(selected.id, action)}
+              onClose={() => setSelectedId(null)}
+            />
+          )}
         </>
       )}
       {view === "insights" && (

@@ -18,6 +18,7 @@ describe("CreateTask", () => {
       value: {
         id: uuid(1),
         title: "牛乳を買う",
+        description: "",
         status: "todo",
         priority: "medium",
         dueDate: null,

@@ -10,6 +10,7 @@ import {
 import {
   ChangeTaskStatus,
   CreateTask,
+  EditTask,
   ListTasks,
   PRIORITIES,
   type Clock,
@@ -56,6 +57,18 @@ const pushBody = z.object({
         command: z.discriminatedUnion("type", [
           createTaskBody.extend({ type: z.literal("CreateTask") }),
           z.object({ type: z.literal("ChangeTaskStatus"), id: z.string(), action: taskAction }),
+          z.object({
+            type: z.literal("EditTask"),
+            id: z.string(),
+            // 値の妥当性（長さ・目盛りなど）はドメインで検証する
+            changes: z.object({
+              title: z.string().optional(),
+              description: z.string().optional(),
+              priority: z.enum(PRIORITIES).optional(),
+              dueDate: z.iso.datetime({ offset: true }).nullable().optional(),
+              storyPoints: z.number().int().optional(),
+            }),
+          }),
         ]),
       }),
     )
@@ -75,6 +88,7 @@ export const createApp = (deps: AppDeps) => {
   const applyPushedChanges = new ApplyPushedChanges({
     createTask,
     changeTaskStatus,
+    editTask: new EditTask(deps),
     processedChanges: deps.processedChanges,
   });
   const pullChanges = new PullChanges({ feed: deps.changeFeed, epoch: deps.changeLogEpoch });

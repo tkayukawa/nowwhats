@@ -11,7 +11,7 @@ import {
   type SyncApi,
   type TaskCommand,
 } from "@nowwhats/sync";
-import { ChangeTaskStatus, CreateTask, ListTasks } from "@nowwhats/task-management";
+import { ChangeTaskStatus, CreateTask, EditTask, ListTasks } from "@nowwhats/task-management";
 import { describe, expect, it } from "vitest";
 import { SqliteLocalStore } from "./sqlite-local-store.ts";
 import { createTestDatabase } from "./test-support.ts";
@@ -26,6 +26,7 @@ const createServer = (epoch = "epoch-1") => {
   const push = new ApplyPushedChanges({
     createTask: new CreateTask({ repository, clock }),
     changeTaskStatus: new ChangeTaskStatus({ repository, clock }),
+    editTask: new EditTask({ repository, clock }),
     processedChanges: new InMemoryProcessedChangeStore(),
   });
   const pull = new PullChanges({ feed: repository, epoch });
@@ -161,5 +162,37 @@ describe("同期（クライアント 2 台 + サーバー）", () => {
 
     // 新しいサーバーにあるタスクを取り込み、存在しないタスクはローカルからも消える
     expect((await a.tasks()).map((t) => t.title)).toEqual(["新しいサーバーのタスク"]);
+  });
+
+  it("2 台で別の項目を編集すると、両方の変更が残る（項目ごとに後の変更を優先）", async () => {
+    const server = createServer();
+    const a = await createClient(server);
+    const b = await createClient(server);
+    const id = uuidv7();
+    await a.run({ type: "CreateTask", id, title: "旅行の準備" });
+    await a.sync();
+    await b.sync();
+
+    // オフラインの間に、A は説明文、B はポイントとタイトルを編集する
+    a.network.online = false;
+    b.network.online = false;
+    await a.run({ type: "EditTask", id, changes: { description: "- 宿を予約\n- 切符を買う" } });
+    await b.run({ type: "EditTask", id, changes: { storyPoints: 3, title: "週末の旅行の準備" } });
+    await a.run({ type: "EditTask", id, changes: { title: "旅行の準備をする" } });
+
+    a.network.online = true;
+    b.network.online = true;
+    await a.sync();
+    await b.sync();
+    await a.sync();
+
+    // タイトルは後からサーバーに届いた B の値。説明文（A）とポイント（B）は両方残る
+    for (const client of [a, b]) {
+      expect((await client.tasks())[0]).toMatchObject({
+        title: "週末の旅行の準備",
+        description: "- 宿を予約\n- 切符を買う",
+        storyPoints: 3,
+      });
+    }
   });
 });

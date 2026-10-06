@@ -2,10 +2,7 @@ import { DEFAULT_STORY_POINT, STORY_POINT_SCALE, type Priority } from "@nowwhats
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import type { NewTask } from "../local/protocol.ts";
 import { dueDateFromInput, dueDateFromToday, dueLabel } from "../task-view.ts";
-
-const chip =
-  "rounded-full border border-faint px-2.5 py-px text-[0.8rem] text-muted hover:text-fg aria-pressed:border-transparent aria-pressed:bg-accent-soft aria-pressed:font-bold aria-pressed:text-accent";
-const chipSelected = "border-transparent bg-accent-soft font-bold text-accent";
+import { chip, chipSelected, primaryButton } from "./classes.ts";
 
 interface Draft {
   readonly priority: Priority;
@@ -79,7 +76,7 @@ export const CaptureForm = ({ disabled, onSubmit }: CaptureFormProps) => {
           <button
             type="submit"
             disabled={disabled || title.trim() === ""}
-            className="rounded-lg bg-accent px-3 py-1.5 text-sm font-bold text-surface disabled:opacity-35"
+            className={primaryButton}
           >
             登録
           </button>

@@ -2,6 +2,7 @@ import type { OwnerId } from "@nowwhats/shared-kernel";
 import type { Priority } from "../domain/priority.ts";
 import { DEFAULT_STORY_POINT, StoryPoint } from "../domain/story-point.ts";
 import { Task } from "../domain/task.ts";
+import { TaskDescription } from "../domain/task-description.ts";
 import { TaskId } from "../domain/task-id.ts";
 import type { TaskStatus } from "../domain/task-status.ts";
 import { TaskTitle } from "../domain/task-title.ts";
@@ -10,6 +11,8 @@ import { TaskTitle } from "../domain/task-title.ts";
 export interface TaskDto {
   readonly id: string;
   readonly title: string;
+  /** Markdown。空文字は説明なし */
+  readonly description: string;
   readonly status: TaskStatus;
   readonly priority: Priority;
   readonly dueDate: string | null;
@@ -22,6 +25,7 @@ export const toTaskDto = (task: Task): TaskDto => {
   return {
     id: s.id,
     title: s.title,
+    description: s.description,
     status: s.status,
     priority: s.priority,
     dueDate: s.dueDate?.toISOString() ?? null,
@@ -38,13 +42,18 @@ export const fromTaskDto = (dto: TaskDto, ownerId: OwnerId): Task | null => {
   const storyPoints = StoryPoint.parse(
     typeof dto.storyPoints === "number" ? dto.storyPoints : DEFAULT_STORY_POINT,
   );
-  if (!id.ok || !title.ok || !storyPoints.ok) {
+  // 説明文の導入前に保存された DTO には description がないため、空として扱う
+  const description = TaskDescription.create(
+    typeof dto.description === "string" ? dto.description : "",
+  );
+  if (!id.ok || !title.ok || !storyPoints.ok || !description.ok) {
     return null;
   }
   return Task.reconstruct({
     id: id.value,
     ownerId,
     title: title.value,
+    description: description.value,
     status: dto.status,
     priority: dto.priority,
     dueDate: dto.dueDate === null ? null : new Date(dto.dueDate),
