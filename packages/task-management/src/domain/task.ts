@@ -1,6 +1,7 @@
 import { err, ok, type OwnerId, type Result } from "@nowwhats/shared-kernel";
 import { DEFAULT_PRIORITY, type Priority } from "./priority.ts";
 import { DEFAULT_STORY_POINT, type StoryPoint } from "./story-point.ts";
+import type { TagId } from "./tag-id.ts";
 import { TaskDescription } from "./task-description.ts";
 import type { TaskEvent } from "./task-events.ts";
 import type { TaskId } from "./task-id.ts";
@@ -52,6 +53,8 @@ export interface TaskSnapshot {
   readonly priority: Priority;
   readonly dueDate: Date | null;
   readonly storyPoints: StoryPoint;
+  /** 付けたタグの ID（重複なし）。存在しないタグの ID は表示・集計から外す（ADR 0007） */
+  readonly tagIds: readonly TagId[];
   /** 完了した日時。完了のときだけ値を持ち、再開すると消える（実績の集計に使う） */
   readonly completedAt: Date | null;
   /** 更新ごとに増える版。同期時の競合検出に使う（ADR 0002） */
@@ -65,12 +68,26 @@ export interface TaskChanges {
   readonly priority?: Priority;
   readonly dueDate?: Date | null;
   readonly storyPoints?: StoryPoint;
+  readonly tagIds?: readonly TagId[];
 }
 
-const EDITABLE_FIELDS = ["title", "description", "priority", "dueDate", "storyPoints"] as const;
+const EDITABLE_FIELDS = [
+  "title",
+  "description",
+  "priority",
+  "dueDate",
+  "storyPoints",
+  "tagIds",
+] as const;
 
-const sameValue = (a: unknown, b: unknown): boolean =>
-  a instanceof Date && b instanceof Date ? a.getTime() === b.getTime() : a === b;
+const sameValue = (a: unknown, b: unknown): boolean => {
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+  // タグは集合として比べる（順序は問わない）
+  if (Array.isArray(a) && Array.isArray(b)) {
+    return a.length === b.length && a.every((x: unknown) => b.includes(x));
+  }
+  return a === b;
+};
 
 /** タスク集約。状態の変更は必ずこのクラスのメソッドを通す。 */
 export class Task {
@@ -88,6 +105,7 @@ export class Task {
     priority?: Priority;
     dueDate?: Date | null;
     storyPoints?: StoryPoint;
+    tagIds?: readonly TagId[];
     now: Date;
   }): Task {
     const task = new Task({
@@ -99,6 +117,7 @@ export class Task {
       priority: params.priority ?? DEFAULT_PRIORITY,
       dueDate: params.dueDate ?? null,
       storyPoints: params.storyPoints ?? DEFAULT_STORY_POINT,
+      tagIds: params.tagIds ?? [],
       completedAt: null,
       version: 1,
     });

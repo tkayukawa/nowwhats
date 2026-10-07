@@ -1,5 +1,4 @@
 import type { OwnerId } from "@nowwhats/shared-kernel";
-import type { TaskChange, TaskChangeFeed } from "@nowwhats/sync";
 import {
   Task,
   toTaskDto,
@@ -7,20 +6,19 @@ import {
   type TaskRepository,
   type TaskSnapshot,
 } from "@nowwhats/task-management";
-
-interface ChangeLogEntry {
-  readonly seq: number;
-  readonly snapshot: TaskSnapshot;
-}
+import type { InMemoryChangeLog } from "./in-memory-change-log.ts";
 
 /**
- * メモリ上に保存する TaskRepository 兼 変更ログ。プロセスを再起動するとデータは消える。
- * PostgreSQL 実装（ADR 0003）に置き換えるまでの暫定。
+ * メモリ上に保存する TaskRepository。保存のたびに変更ログへ記録する。
+ * プロセスを再起動するとデータは消える。PostgreSQL 実装（ADR 0003）に置き換えるまでの暫定。
  */
-export class InMemoryTaskRepository implements TaskRepository, TaskChangeFeed {
+export class InMemoryTaskRepository implements TaskRepository {
   private readonly snapshots = new Map<TaskId, TaskSnapshot>();
-  private readonly changeLog: ChangeLogEntry[] = [];
-  private seq = 0;
+  private readonly log: InMemoryChangeLog;
+
+  constructor(log: InMemoryChangeLog) {
+    this.log = log;
+  }
 
   findById(ownerId: OwnerId, id: TaskId): Promise<Task | null> {
     const snapshot = this.snapshots.get(id);
@@ -41,16 +39,7 @@ export class InMemoryTaskRepository implements TaskRepository, TaskChangeFeed {
     // 呼び出し側が保持する集約の変更が混ざらないよう、スナップショットで保存する
     const snapshot = task.toSnapshot();
     this.snapshots.set(task.id, snapshot);
-    this.seq += 1;
-    this.changeLog.push({ seq: this.seq, snapshot });
+    this.log.append(snapshot.ownerId, { kind: "task", task: toTaskDto(task) });
     return Promise.resolve();
-  }
-
-  since(ownerId: OwnerId, cursor: number, limit: number): Promise<TaskChange[]> {
-    const changes = this.changeLog
-      .filter((e) => e.seq > cursor && e.snapshot.ownerId === ownerId)
-      .slice(0, limit)
-      .map((e) => ({ seq: e.seq, task: toTaskDto(Task.reconstruct(e.snapshot)) }));
-    return Promise.resolve(changes);
   }
 }

@@ -20,6 +20,15 @@
   --nw-danger-soft: #fdecea;
   --nw-warn: #b26a00;
   --nw-ok: #1f8a5b;
+  /* タグの色（検証済みのカテゴリ配色。ADR 0007） */
+  --nw-tag-blue: #2a78d6;
+  --nw-tag-orange: #eb6834;
+  --nw-tag-aqua: #1baf7a;
+  --nw-tag-yellow: #eda100;
+  --nw-tag-magenta: #e87ba4;
+  --nw-tag-green: #008300;
+  --nw-tag-violet: #4a3aa7;
+  --nw-tag-red: #e34948;
   /* 活動カレンダーの濃淡（量が多いほど濃い） */
   --nw-seq-0: #eceef3;
   --nw-seq-1: #c7d3f7;
@@ -43,6 +52,14 @@
     --nw-danger-soft: #3a2222;
     --nw-warn: #f2b45a;
     --nw-ok: #5ccf98;
+    --nw-tag-blue: #3987e5;
+    --nw-tag-orange: #d95926;
+    --nw-tag-aqua: #199e70;
+    --nw-tag-yellow: #c98500;
+    --nw-tag-magenta: #d55181;
+    --nw-tag-green: #008300;
+    --nw-tag-violet: #9085e9;
+    --nw-tag-red: #e66767;
     /* ダークでは量が多いほど明るい */
     --nw-seq-0: #22262f;
     --nw-seq-1: #26346a;

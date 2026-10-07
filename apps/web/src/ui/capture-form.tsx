@@ -1,24 +1,39 @@
-import { DEFAULT_STORY_POINT, STORY_POINT_SCALE, type Priority } from "@nowwhats/task-management";
+import {
+  DEFAULT_STORY_POINT,
+  STORY_POINT_SCALE,
+  type Priority,
+  type TagDto,
+} from "@nowwhats/task-management";
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import type { NewTask } from "../local/protocol.ts";
 import { dueDateFromInput, dueDateFromToday, dueLabel } from "../task-view.ts";
 import { chip, chipSelected, primaryButton } from "./classes.ts";
+import { TagField } from "./tags.tsx";
 
 interface Draft {
   readonly priority: Priority;
   readonly dueDate: string | null;
   readonly storyPoints: number;
+  readonly tagIds: readonly string[];
 }
 
-const INITIAL: Draft = { priority: "medium", dueDate: null, storyPoints: DEFAULT_STORY_POINT };
+const INITIAL: Draft = {
+  priority: "medium",
+  dueDate: null,
+  storyPoints: DEFAULT_STORY_POINT,
+  tagIds: [],
+};
 
 export interface CaptureFormProps {
   readonly disabled: boolean;
+  readonly tags: readonly TagDto[];
+  /** 新しいタグを作る。成功したら ID、失敗したら null を返す */
+  readonly onCreateTag: (name: string) => Promise<string | null>;
   /** 失敗時は利用者向けのエラー文言を返す */
   readonly onSubmit: (task: NewTask) => Promise<string | null>;
 }
 
-export const CaptureForm = ({ disabled, onSubmit }: CaptureFormProps) => {
+export const CaptureForm = ({ disabled, tags, onCreateTag, onSubmit }: CaptureFormProps) => {
   const [title, setTitle] = useState("");
   const [draft, setDraft] = useState<Draft>(INITIAL);
   const [error, setError] = useState<string | null>(null);
@@ -139,6 +154,16 @@ export const CaptureForm = ({ disabled, onSubmit }: CaptureFormProps) => {
           <span className="ml-auto text-xs text-muted max-sm:hidden">
             日本語変換中の Enter では登録しません
           </span>
+        </div>
+        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="タグ">
+          <span className="mr-1 text-xs text-muted">タグ</span>
+          <TagField
+            label="登録するタスクのタグ"
+            tags={tags}
+            selectedIds={draft.tagIds}
+            onChange={(tagIds) => setDraft((d) => ({ ...d, tagIds }))}
+            onCreate={onCreateTag}
+          />
         </div>
       </form>
       {error !== null && (

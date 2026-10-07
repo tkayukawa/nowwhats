@@ -5,14 +5,19 @@ import {
   PULL_LIMIT_MAX,
   PullChanges,
   type ProcessedChangeStore,
-  type TaskChangeFeed,
+  type ChangeFeed,
 } from "@nowwhats/sync";
 import {
   ChangeTaskStatus,
+  CreateTag,
   CreateTask,
+  DeleteTag,
   EditTask,
   ListTasks,
   PRIORITIES,
+  RecolorTag,
+  RenameTag,
+  type TagRepository,
   type Clock,
   type TaskRepository,
 } from "@nowwhats/task-management";
@@ -25,7 +30,8 @@ export type OwnerResolver = (headers: Headers) => Promise<OwnerId | null>;
 
 export interface AppDeps {
   readonly repository: TaskRepository;
-  readonly changeFeed: TaskChangeFeed;
+  readonly tags: TagRepository;
+  readonly changeFeed: ChangeFeed;
   readonly processedChanges: ProcessedChangeStore;
   /** 変更ログの識別子（ADR 0006）。メモリ実装では起動ごとに変わる */
   readonly changeLogEpoch: string;
@@ -40,6 +46,7 @@ const createTaskBody = z.object({
   dueDate: z.iso.datetime({ offset: true }).nullable().optional(),
   // 値の範囲（目盛り）はドメインで検証する
   storyPoints: z.number().int().optional(),
+  tagIds: z.array(z.string()).max(20).optional(),
 });
 
 const taskAction = z.enum(["start", "complete", "cancel", "reopen"]);
@@ -68,8 +75,19 @@ const pushBody = z.object({
               priority: z.enum(PRIORITIES).optional(),
               dueDate: z.iso.datetime({ offset: true }).nullable().optional(),
               storyPoints: z.number().int().optional(),
+              tagIds: z.array(z.string()).max(20).optional(),
             }),
           }),
+          // タグの操作（ADR 0007）。名前の長さ・色の値などはドメインで検証する
+          z.object({
+            type: z.literal("CreateTag"),
+            id: z.string(),
+            name: z.string().max(200),
+            color: z.string().optional(),
+          }),
+          z.object({ type: z.literal("RenameTag"), id: z.string(), name: z.string().max(200) }),
+          z.object({ type: z.literal("RecolorTag"), id: z.string(), color: z.string() }),
+          z.object({ type: z.literal("DeleteTag"), id: z.string() }),
         ]),
       }),
     )
@@ -92,6 +110,10 @@ export const createApp = (deps: AppDeps) => {
       createTask: new CreateTask({ ...deps, clock }),
       changeTaskStatus: new ChangeTaskStatus({ ...deps, clock }),
       editTask: new EditTask({ ...deps, clock }),
+      createTag: new CreateTag(deps),
+      renameTag: new RenameTag(deps),
+      recolorTag: new RecolorTag(deps),
+      deleteTag: new DeleteTag(deps),
     }),
     clock: deps.clock,
     processedChanges: deps.processedChanges,
@@ -124,6 +146,7 @@ export const createApp = (deps: AppDeps) => {
             dueDate: body.dueDate === null ? null : new Date(body.dueDate),
           }),
           ...(body.storyPoints !== undefined && { storyPoints: body.storyPoints }),
+          ...(body.tagIds !== undefined && { tagIds: body.tagIds }),
         });
         if (!result.ok) {
           const { status, body: errorBody } = toHttpError(result.error);

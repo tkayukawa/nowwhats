@@ -1,5 +1,7 @@
 import {
+  InMemoryChangeLog,
   InMemoryProcessedChangeStore,
+  InMemoryTagRepository,
   InMemoryTaskRepository,
 } from "@nowwhats/infrastructure-server";
 import { OwnerId } from "@nowwhats/shared-kernel";
@@ -11,7 +13,17 @@ import {
   type SyncApi,
   type TaskCommand,
 } from "@nowwhats/sync";
-import { ChangeTaskStatus, CreateTask, EditTask, ListTasks } from "@nowwhats/task-management";
+import {
+  ChangeTaskStatus,
+  CreateTag,
+  CreateTask,
+  DeleteTag,
+  EditTask,
+  ListTags,
+  ListTasks,
+  RecolorTag,
+  RenameTag,
+} from "@nowwhats/task-management";
 import { describe, expect, it } from "vitest";
 import { SqliteLocalStore } from "./sqlite-local-store.ts";
 import { createTestDatabase } from "./test-support.ts";
@@ -23,18 +35,24 @@ const clock = { now: () => serverTime.now };
 
 /** サーバー（メモリ実装）と、それに接続する SyncApi を作る。online=false で通信失敗を再現する */
 const createServer = (epoch = "epoch-1") => {
-  const repository = new InMemoryTaskRepository();
+  const log = new InMemoryChangeLog();
+  const repository = new InMemoryTaskRepository(log);
+  const tags = new InMemoryTagRepository(log);
   const owner = OwnerId.of("dev-user");
   const push = new ApplyPushedChanges({
     useCasesAt: (at) => ({
       createTask: new CreateTask({ repository, clock: at }),
       changeTaskStatus: new ChangeTaskStatus({ repository, clock: at }),
       editTask: new EditTask({ repository, clock: at }),
+      createTag: new CreateTag({ tags }),
+      renameTag: new RenameTag({ tags }),
+      recolorTag: new RecolorTag({ tags }),
+      deleteTag: new DeleteTag({ tags }),
     }),
     clock,
     processedChanges: new InMemoryProcessedChangeStore(),
   });
-  const pull = new PullChanges({ feed: repository, epoch });
+  const pull = new PullChanges({ feed: log, epoch });
   const connect = (network: { online: boolean }): SyncApi => ({
     push: (changes) => {
       if (!network.online) return Promise.reject(new Error("offline"));
@@ -70,6 +88,10 @@ const createClient = async (server: ReturnType<typeof createServer>) => {
         new ListTasks({ repository: tx.tasks }).execute({ ownerId: context.ownerId }),
       ),
     pending: () => store.transaction((tx) => tx.outbox.count()),
+    tags: () =>
+      store.transaction((tx) =>
+        new ListTags({ tags: tx.tags }).execute({ ownerId: context.ownerId }),
+      ),
   };
 };
 
@@ -227,5 +249,59 @@ describe("同期（クライアント 2 台 + サーバー）", () => {
       expect((await client.tasks())[0]?.completedAt).toBe("2026-10-05T09:30:00.000Z");
     }
     serverTime.now = new Date("2026-10-05T00:00:00Z");
+  });
+
+  it("タグの作成・名前変更・削除と、タスクへのタグ付けが他の端末に届く", async () => {
+    const server = createServer();
+    const a = await createClient(server);
+    const b = await createClient(server);
+    const work = uuidv7();
+    const home = uuidv7();
+    const task = uuidv7();
+    await a.run({ type: "CreateTag", id: work, name: "仕事" });
+    await a.run({ type: "CreateTag", id: home, name: "家" });
+    await a.run({ type: "CreateTask", id: task, title: "請求書", tagIds: [work, home] });
+    await a.sync();
+    await b.sync();
+    expect((await b.tags()).map((t) => [t.name, t.color])).toEqual(
+      expect.arrayContaining([
+        ["仕事", "blue"],
+        ["家", "orange"],
+      ]),
+    );
+    expect((await b.tasks())[0]?.tagIds).toEqual([work, home]);
+
+    await b.run({ type: "RenameTag", id: work, name: "仕事（本業）" });
+    await b.run({ type: "DeleteTag", id: home });
+    await b.sync();
+    await a.sync();
+
+    expect((await a.tags()).map((t) => t.name)).toEqual(["仕事（本業）"]);
+    // 削除したタグの ID はタスクに残る（表示・集計で外す。ADR 0007）
+    expect((await a.tasks())[0]?.tagIds).toEqual([work, home]);
+  });
+
+  it("オフラインの 2 台で同じ名前のタグを作ると、後から届いた方が差し戻される", async () => {
+    const server = createServer();
+    const a = await createClient(server);
+    const b = await createClient(server);
+    a.network.online = false;
+    b.network.online = false;
+    await a.run({ type: "CreateTag", id: uuidv7(), name: "読書" });
+    const late = uuidv7();
+    await b.run({ type: "CreateTag", id: late, name: "読書" });
+
+    a.network.online = true;
+    b.network.online = true;
+    await a.sync();
+    const report = await b.sync();
+
+    expect(report.rejected).toEqual([
+      expect.objectContaining({ title: "読書", error: { type: "TagNameDuplicate" } }),
+    ]);
+    // B のローカルは、サーバーにある A のタグだけになる
+    const tags = await b.tags();
+    expect(tags).toHaveLength(1);
+    expect(tags[0]?.id).not.toBe(late);
   });
 });

@@ -1,17 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { serve } from "@hono/node-server";
 import {
+  InMemoryChangeLog,
   InMemoryProcessedChangeStore,
+  InMemoryTagRepository,
   InMemoryTaskRepository,
 } from "@nowwhats/infrastructure-server";
 import { createApp } from "./app.ts";
 import { createDevOwnerResolver } from "./dev-owner-resolver.ts";
 
 // Composition Root: ここでだけ具体的な実装（Adapter）を組み立てる
-const repository = new InMemoryTaskRepository();
+const changeLog = new InMemoryChangeLog();
 const app = createApp({
-  repository,
-  changeFeed: repository,
+  repository: new InMemoryTaskRepository(changeLog),
+  tags: new InMemoryTagRepository(changeLog),
+  changeFeed: changeLog,
   processedChanges: new InMemoryProcessedChangeStore(),
   // メモリ実装は再起動でデータが消えるため、起動ごとに epoch を変えてクライアントに取り込み直させる
   changeLogEpoch: randomUUID(),

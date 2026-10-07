@@ -5,12 +5,17 @@ import type {
   LocalTransaction,
   OutboxStore,
   PendingChange,
-  ServerTaskStore,
+  ServerStateStore,
   SyncStateStore,
 } from "@nowwhats/sync";
 import {
+  fromTagDto,
   PRIORITIES,
   StoryPoint,
+  type Tag,
+  type TagDto,
+  TagId,
+  type TagRepository,
   Task,
   TaskDescription,
   TASK_STATUSES,
@@ -29,6 +34,7 @@ type TaskRow = {
   priority: string;
   due_date: string | null;
   story_points: number;
+  tag_ids: string;
   completed_at: string | null;
   version: number;
 };
@@ -59,6 +65,10 @@ const toTask = (row: TaskRow, ownerId: OwnerId): Task => {
     priority,
     dueDate: row.due_date === null ? null : new Date(row.due_date),
     storyPoints: storyPoints.value,
+    tagIds: (JSON.parse(row.tag_ids) as string[]).flatMap((raw) => {
+      const tagId = TagId.parse(raw);
+      return tagId.ok ? [tagId.value] : [];
+    }),
     completedAt: row.completed_at === null ? null : new Date(row.completed_at),
     version: row.version,
   });
@@ -87,13 +97,14 @@ class SqliteTaskRepository implements LocalTaskRepository {
   save(task: Task): Promise<void> {
     const s = task.toSnapshot();
     this.db.run(
-      `INSERT INTO tasks (id, owner_id, title, description, status, priority, due_date, story_points, completed_at, version)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO tasks (id, owner_id, title, description, status, priority, due_date, story_points, tag_ids, completed_at, version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (id) DO UPDATE SET
          owner_id = excluded.owner_id, title = excluded.title, description = excluded.description,
          status = excluded.status,
          priority = excluded.priority, due_date = excluded.due_date,
-         story_points = excluded.story_points, completed_at = excluded.completed_at,
+         story_points = excluded.story_points, tag_ids = excluded.tag_ids,
+         completed_at = excluded.completed_at,
          version = excluded.version`,
       [
         s.id,
@@ -104,6 +115,7 @@ class SqliteTaskRepository implements LocalTaskRepository {
         s.priority,
         s.dueDate?.toISOString() ?? null,
         s.storyPoints,
+        JSON.stringify(s.tagIds),
         s.completedAt?.toISOString() ?? null,
         s.version,
       ],
@@ -117,28 +129,83 @@ class SqliteTaskRepository implements LocalTaskRepository {
   }
 }
 
-class SqliteServerTaskStore implements ServerTaskStore {
+/** 最後に受け取ったサーバーの状態を JSON で保存する（server_tasks / server_tags） */
+class SqliteServerStateStore<T extends { readonly id: string }> implements ServerStateStore<T> {
+  private readonly db: SqlDatabase;
+  private readonly table: "server_tasks" | "server_tags";
+
+  constructor(db: SqlDatabase, table: "server_tasks" | "server_tags") {
+    this.db = db;
+    this.table = table;
+  }
+
+  upsert(item: T): Promise<void> {
+    this.db.run(
+      `INSERT INTO ${this.table} (id, data) VALUES (?, ?) ON CONFLICT (id) DO UPDATE SET data = excluded.data`,
+      [item.id, JSON.stringify(item)],
+    );
+    return Promise.resolve();
+  }
+
+  find(id: string): Promise<T | null> {
+    const [row] = this.db.all<{ data: string }>(`SELECT data FROM ${this.table} WHERE id = ?`, [
+      id,
+    ]);
+    return Promise.resolve(row === undefined ? null : (JSON.parse(row.data) as T));
+  }
+
+  remove(id: string): Promise<void> {
+    this.db.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
+    return Promise.resolve();
+  }
+
+  clear(): Promise<void> {
+    this.db.run(`DELETE FROM ${this.table}`);
+    return Promise.resolve();
+  }
+}
+
+type TagRow = { id: string; owner_id: string; name: string; color: string; version: number };
+
+class SqliteTagRepository implements TagRepository {
   private readonly db: SqlDatabase;
 
   constructor(db: SqlDatabase) {
     this.db = db;
   }
 
-  upsert(task: TaskDto): Promise<void> {
+  private toTag(row: TagRow, ownerId: OwnerId): Tag {
+    const tag = fromTagDto(row, ownerId);
+    if (tag === null) throw new Error(`corrupted local tag row: ${row.id}`);
+    return tag;
+  }
+
+  findById(ownerId: OwnerId, id: TagId): Promise<Tag | null> {
+    const [row] = this.db.all<TagRow>("SELECT * FROM tags WHERE owner_id = ? AND id = ?", [
+      ownerId,
+      id,
+    ]);
+    return Promise.resolve(row === undefined ? null : this.toTag(row, ownerId));
+  }
+
+  findAllByOwner(ownerId: OwnerId): Promise<Tag[]> {
+    const rows = this.db.all<TagRow>("SELECT * FROM tags WHERE owner_id = ?", [ownerId]);
+    return Promise.resolve(rows.map((row) => this.toTag(row, ownerId)));
+  }
+
+  save(tag: Tag): Promise<void> {
+    const s = tag.toSnapshot();
     this.db.run(
-      "INSERT INTO server_tasks (id, data) VALUES (?, ?) ON CONFLICT (id) DO UPDATE SET data = excluded.data",
-      [task.id, JSON.stringify(task)],
+      `INSERT INTO tags (id, owner_id, name, color, version) VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT (id) DO UPDATE SET
+         owner_id = excluded.owner_id, name = excluded.name, color = excluded.color, version = excluded.version`,
+      [s.id, s.ownerId, s.name, s.color, s.version],
     );
     return Promise.resolve();
   }
 
-  find(id: string): Promise<TaskDto | null> {
-    const [row] = this.db.all<{ data: string }>("SELECT data FROM server_tasks WHERE id = ?", [id]);
-    return Promise.resolve(row === undefined ? null : (JSON.parse(row.data) as TaskDto));
-  }
-
-  clear(): Promise<void> {
-    this.db.run("DELETE FROM server_tasks");
+  remove(ownerId: OwnerId, id: TagId): Promise<void> {
+    this.db.run("DELETE FROM tags WHERE owner_id = ? AND id = ?", [ownerId, id]);
     return Promise.resolve();
   }
 }
@@ -238,7 +305,9 @@ export class SqliteLocalStore implements LocalStore {
     this.db = db;
     this.tx = {
       tasks: new SqliteTaskRepository(db),
-      serverTasks: new SqliteServerTaskStore(db),
+      tags: new SqliteTagRepository(db),
+      serverTasks: new SqliteServerStateStore<TaskDto>(db, "server_tasks"),
+      serverTags: new SqliteServerStateStore<TagDto>(db, "server_tags"),
       outbox: new SqliteOutboxStore(db),
       syncState: new SqliteSyncStateStore(db),
     };

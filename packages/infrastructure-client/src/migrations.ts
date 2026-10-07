@@ -35,6 +35,21 @@ const MIGRATIONS: readonly string[] = [
   ALTER TABLE tasks ADD COLUMN completed_at TEXT;
   ALTER TABLE outbox ADD COLUMN occurred_at TEXT;
   `,
+  // 5: タグ（ADR 0007）。tasks.tag_ids はタグ ID の JSON 配列。既存のタスクはタグなし
+  `
+  ALTER TABLE tasks ADD COLUMN tag_ids TEXT NOT NULL DEFAULT '[]';
+  CREATE TABLE tags (
+    id TEXT PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    color TEXT NOT NULL,
+    version INTEGER NOT NULL
+  );
+  CREATE TABLE server_tags (
+    id TEXT PRIMARY KEY,
+    data TEXT NOT NULL
+  );
+  `,
 ];
 
 /** 未適用のマイグレーションを順に適用する。適用済みの数は PRAGMA user_version で管理する。 */

@@ -18,6 +18,8 @@ export const toHttpError = (error: DomainError): HttpError => {
     case "TaskTitleEmpty":
     case "StoryPointInvalid":
     case "TaskDescriptionTooLong":
+    case "TagIdInvalid":
+    case "TaskTagsTooMany":
       return { status: 400, body: { error } };
     case "TaskNotFound":
       return { status: 404, body: { error } };

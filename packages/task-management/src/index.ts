@@ -27,3 +27,30 @@ export { ListTasks } from "./application/list-tasks.ts";
 export { fromTaskDto, toTaskDto } from "./application/task-dto.ts";
 export type { TaskDto } from "./application/task-dto.ts";
 export type { Clock } from "./application/ports.ts";
+export { Tag } from "./domain/tag.ts";
+export type { TagSnapshot } from "./domain/tag.ts";
+export { TagId } from "./domain/tag-id.ts";
+export type { TagIdError } from "./domain/tag-id.ts";
+export { TagName, TAG_NAME_MAX_LENGTH } from "./domain/tag-name.ts";
+export type { TagNameError } from "./domain/tag-name.ts";
+export { TagColor, TAG_COLORS } from "./domain/tag-color.ts";
+export type { TagColorError } from "./domain/tag-color.ts";
+export type { TagRepository } from "./domain/tag-repository.ts";
+export { TASK_TAGS_MAX } from "./domain/task-tags.ts";
+export type { TaskTagsError } from "./domain/task-tags.ts";
+export { fromTagDto, toTagDto } from "./application/tag-dto.ts";
+export type { TagDto } from "./application/tag-dto.ts";
+export {
+  CreateTag,
+  DeleteTag,
+  ListTags,
+  RecolorTag,
+  RenameTag,
+} from "./application/tag-use-cases.ts";
+export type {
+  CreateTagError,
+  DeleteTagError,
+  RecolorTagError,
+  RenameTagError,
+  TagUseCaseDeps,
+} from "./application/tag-use-cases.ts";

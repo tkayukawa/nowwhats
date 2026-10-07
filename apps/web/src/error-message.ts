@@ -11,6 +11,16 @@ export const errorMessage = (type: string | null): string => {
       return "ポイントの値が正しくありません";
     case "TaskDescriptionTooLong":
       return "説明文が長すぎます（20,000 文字まで）";
+    case "TagNameEmpty":
+      return "タグの名前を入力してください";
+    case "TagNameTooLong":
+      return "タグの名前は 30 文字までです";
+    case "TagNameDuplicate":
+      return "同じ名前のタグがすでにあります";
+    case "TaskTagsTooMany":
+      return "タグは 1 つのタスクに 10 個までです";
+    case "TagNotFound":
+      return "タグが見つかりません";
     case "TaskAlreadyExists":
       return "同じタスクがすでに登録されています";
     default:

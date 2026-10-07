@@ -1,11 +1,12 @@
+export { isTagCommand } from "./application/task-command.ts";
 export type { TaskCommand, PendingChange } from "./application/task-command.ts";
 export type {
   ChangeResult,
   CommandError,
   PullResult,
-  TaskChange,
+  SyncChange,
 } from "./application/sync-protocol.ts";
-export type { ProcessedChangeStore, TaskChangeFeed } from "./application/ports.ts";
+export type { ChangeFeed, ProcessedChangeStore } from "./application/ports.ts";
 export { ApplyPushedChanges } from "./application/apply-pushed-changes.ts";
 export type { ApplyPushedChangesDeps } from "./application/apply-pushed-changes.ts";
 export { PullChanges, PULL_LIMIT_MAX } from "./application/pull-changes.ts";
@@ -16,6 +17,8 @@ export type {
   LocalTransaction,
   LocalTaskRepository,
   OutboxStore,
+  ServerStateStore,
+  ServerTagStore,
   ServerTaskStore,
   SyncStateStore,
   SyncApi,

@@ -1,4 +1,7 @@
 import { OwnerId } from "@nowwhats/shared-kernel";
+import type { Tag } from "../domain/tag.ts";
+import type { TagId } from "../domain/tag-id.ts";
+import type { TagRepository } from "../domain/tag-repository.ts";
 import type { Task } from "../domain/task.ts";
 import type { TaskId } from "../domain/task-id.ts";
 import type { TaskRepository } from "../domain/task-repository.ts";
@@ -23,6 +26,29 @@ export class InMemoryTaskRepository implements TaskRepository {
 
   get size(): number {
     return this.tasks.size;
+  }
+}
+
+export class InMemoryTagRepository implements TagRepository {
+  private readonly tags = new Map<string, Tag>();
+
+  findById(ownerId: OwnerId, id: TagId): Promise<Tag | null> {
+    const tag = this.tags.get(id);
+    return Promise.resolve(tag !== undefined && tag.ownerId === ownerId ? tag : null);
+  }
+
+  findAllByOwner(ownerId: OwnerId): Promise<Tag[]> {
+    return Promise.resolve([...this.tags.values()].filter((t) => t.ownerId === ownerId));
+  }
+
+  save(tag: Tag): Promise<void> {
+    this.tags.set(tag.id, tag);
+    return Promise.resolve();
+  }
+
+  remove(_ownerId: OwnerId, id: TagId): Promise<void> {
+    this.tags.delete(id);
+    return Promise.resolve();
   }
 }
 

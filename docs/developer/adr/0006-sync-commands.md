@@ -30,7 +30,7 @@
 | エンドポイント                        | 内容                                                                                                                                          |
 | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
 | `POST /api/sync/push`                 | `{ changes: PendingChange[] }`（最大 100 件）→ `{ results: ChangeResult[] }`。ドメインのルール違反も 200 で返し、結果の中で `rejected` とする |
-| `GET /api/sync/pull?cursor=N&limit=M` | `{ changes: { seq, task }[], cursor, hasMore }`（`limit` は最大 500）                                                                         |
+| `GET /api/sync/pull?cursor=N&limit=M` | `{ epoch, changes: SyncChange[], cursor, hasMore }`（`limit` は最大 500。`SyncChange` は種類付き。ADR 0007）                                  |
 
 ## 結果
 

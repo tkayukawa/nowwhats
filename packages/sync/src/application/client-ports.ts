@@ -1,4 +1,10 @@
-import type { TaskDto, TaskId, TaskRepository } from "@nowwhats/task-management";
+import type {
+  TagDto,
+  TagRepository,
+  TaskDto,
+  TaskId,
+  TaskRepository,
+} from "@nowwhats/task-management";
 import type { ChangeResult, PullResult } from "./sync-protocol.ts";
 import type { PendingChange } from "./task-command.ts";
 
@@ -16,12 +22,16 @@ export interface OutboxStore {
 }
 
 /** 最後に受け取ったサーバー側の状態（リベースの基準） */
-export interface ServerTaskStore {
-  upsert(task: TaskDto): Promise<void>;
-  find(id: string): Promise<TaskDto | null>;
+export interface ServerStateStore<T> {
+  upsert(item: T): Promise<void>;
+  find(id: string): Promise<T | null>;
+  remove(id: string): Promise<void>;
   /** サーバーの epoch が変わったときに、取り込み済みの状態をすべて捨てる */
   clear(): Promise<void>;
 }
+
+export type ServerTaskStore = ServerStateStore<TaskDto>;
+export type ServerTagStore = ServerStateStore<TagDto>;
 
 export interface SyncStateStore {
   getCursor(): Promise<number>;
@@ -32,7 +42,9 @@ export interface SyncStateStore {
 
 export interface LocalTransaction {
   readonly tasks: LocalTaskRepository;
+  readonly tags: TagRepository;
   readonly serverTasks: ServerTaskStore;
+  readonly serverTags: ServerTagStore;
   readonly outbox: OutboxStore;
   readonly syncState: SyncStateStore;
 }

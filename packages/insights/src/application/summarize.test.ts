@@ -22,6 +22,7 @@ const done = (id: number, points: number, completedAt: Date | null): TaskDto => 
   priority: "medium",
   dueDate: null,
   storyPoints: points,
+  tagIds: [],
   completedAt: completedAt?.toISOString() ?? null,
   version: 2,
 });

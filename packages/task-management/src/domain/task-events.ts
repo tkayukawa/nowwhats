@@ -26,7 +26,9 @@ export interface TaskReopened extends TaskEventBase {
 export interface TaskEdited extends TaskEventBase {
   readonly type: "TaskEdited";
   /** 値が変わった項目 */
-  readonly fields: readonly ("title" | "description" | "priority" | "dueDate" | "storyPoints")[];
+  readonly fields: readonly (
+    "title" | "description" | "priority" | "dueDate" | "storyPoints" | "tagIds"
+  )[];
 }
 
 export type TaskEvent =

@@ -1,5 +1,7 @@
 import {
+  InMemoryChangeLog,
   InMemoryProcessedChangeStore,
+  InMemoryTagRepository,
   InMemoryTaskRepository,
 } from "@nowwhats/infrastructure-server";
 import { OwnerId } from "@nowwhats/shared-kernel";
@@ -9,10 +11,11 @@ import { createApp } from "./app.ts";
 const ID = "0199b1a0-0000-7000-8000-000000000001";
 
 const setup = (owner: OwnerId | null = OwnerId.of("u-1")) => {
-  const repository = new InMemoryTaskRepository();
+  const changeLog = new InMemoryChangeLog();
   return createApp({
-    repository,
-    changeFeed: repository,
+    repository: new InMemoryTaskRepository(changeLog),
+    tags: new InMemoryTagRepository(changeLog),
+    changeFeed: changeLog,
     processedChanges: new InMemoryProcessedChangeStore(),
     changeLogEpoch: "epoch-1",
     clock: { now: () => new Date("2026-10-05T00:00:00Z") },
@@ -106,7 +109,7 @@ describe("API", () => {
     const pulled = await app.request("/api/sync/pull?cursor=0");
     expect(await pulled.json()).toMatchObject({
       epoch: "epoch-1",
-      changes: [{ seq: 1, task: { id: ID, status: "todo" } }],
+      changes: [{ seq: 1, kind: "task", task: { id: ID, status: "todo" } }],
       cursor: 1,
       hasMore: false,
     });
@@ -121,5 +124,33 @@ describe("API", () => {
     );
 
     expect(res.status).toBe(400);
+  });
+
+  it("同期: タグの操作を受け付け、変更ログに種類付きで返す", async () => {
+    const app = setup();
+    const TAG = "0199b1a0-0000-7000-9000-000000000001";
+
+    const pushed = await app.request(
+      "/api/sync/push",
+      post({
+        changes: [
+          { changeId: "c-1", command: { type: "CreateTag", id: TAG, name: "仕事" } },
+          { changeId: "c-2", command: { type: "CreateTask", id: ID, title: "a", tagIds: [TAG] } },
+          { changeId: "c-3", command: { type: "DeleteTag", id: TAG } },
+        ],
+      }),
+    );
+    expect(await pushed.json()).toMatchObject({
+      results: [{ status: "applied" }, { status: "applied" }, { status: "applied" }],
+    });
+
+    const pulled = await app.request("/api/sync/pull?cursor=0");
+    expect(await pulled.json()).toMatchObject({
+      changes: [
+        { seq: 1, kind: "tag", tag: { id: TAG, name: "仕事", color: "blue" } },
+        { seq: 2, kind: "task", task: { id: ID, tagIds: [TAG] } },
+        { seq: 3, kind: "tagDeleted", tagId: TAG },
+      ],
+    });
   });
 });

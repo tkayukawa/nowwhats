@@ -1,7 +1,13 @@
-import { availableActions, type TaskAction, type TaskDto } from "@nowwhats/task-management";
+import {
+  availableActions,
+  type TagDto,
+  type TaskAction,
+  type TaskDto,
+} from "@nowwhats/task-management";
 import { useEffect, useRef, useState } from "react";
 import { NoteIcon } from "../icons.tsx";
-import { dueInfo, isOpen } from "../task-view.ts";
+import { dueInfo, isOpen, resolveTags } from "../task-view.ts";
+import { TagChip } from "./tags.tsx";
 
 const MENU_LABEL: Record<TaskAction, string> = {
   start: "着手する",
@@ -32,13 +38,15 @@ const checkStyle = (status: TaskDto["status"]): string => {
 
 export interface TaskRowProps {
   readonly task: TaskDto;
+  readonly tags: readonly TagDto[];
   readonly today: Date;
   readonly selected: boolean;
   readonly onAction: (id: string, action: TaskAction) => void;
   readonly onOpen: (id: string) => void;
 }
 
-export const TaskRow = ({ task, today, selected, onAction, onOpen }: TaskRowProps) => {
+export const TaskRow = ({ task, tags, today, selected, onAction, onOpen }: TaskRowProps) => {
+  const taskTags = resolveTags(task.tagIds, tags);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const primary: TaskAction = isOpen(task.status) ? "complete" : "reopen";
@@ -88,6 +96,13 @@ export const TaskRow = ({ task, today, selected, onAction, onOpen }: TaskRowProp
         >
           {task.title}
         </span>
+        {taskTags.length > 0 && (
+          <span className="inline-flex shrink-0 gap-1">
+            {taskTags.map((t) => (
+              <TagChip key={t.id} tag={t} />
+            ))}
+          </span>
+        )}
         {task.description !== "" && (
           <NoteIcon
             className="size-3.5 shrink-0 text-muted"

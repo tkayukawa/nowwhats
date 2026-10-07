@@ -1,8 +1,12 @@
 import { OwnerId } from "@nowwhats/shared-kernel";
 import {
   ChangeTaskStatus,
+  CreateTag,
   CreateTask,
+  DeleteTag,
   EditTask,
+  RecolorTag,
+  RenameTag,
   type Task,
   type TaskId,
   type TaskRepository,
@@ -23,6 +27,22 @@ class FakeTaskRepository implements TaskRepository {
   }
   save(task: Task) {
     this.tasks.set(task.id, task);
+    return Promise.resolve();
+  }
+}
+
+/** このテストではタグを使わないため、空の Repository を渡す */
+class InMemoryTags {
+  findById() {
+    return Promise.resolve(null);
+  }
+  findAllByOwner() {
+    return Promise.resolve([]);
+  }
+  save() {
+    return Promise.resolve();
+  }
+  remove() {
     return Promise.resolve();
   }
 }
@@ -50,6 +70,10 @@ const setup = () => {
       createTask: new CreateTask({ repository, clock: at }),
       changeTaskStatus: new ChangeTaskStatus({ repository, clock: at }),
       editTask: new EditTask({ repository, clock: at }),
+      createTag: new CreateTag({ tags: new InMemoryTags() }),
+      renameTag: new RenameTag({ tags: new InMemoryTags() }),
+      recolorTag: new RecolorTag({ tags: new InMemoryTags() }),
+      deleteTag: new DeleteTag({ tags: new InMemoryTags() }),
     }),
     clock,
     processedChanges,
