@@ -1,4 +1,4 @@
-import type { TaskAction, TaskDto } from "@nowwhats/task-management";
+import type { TagDto, TaskAction, TaskDto } from "@nowwhats/task-management";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { errorMessage } from "../error-message.ts";
 import { LocalClient } from "./local-client.ts";
@@ -12,6 +12,7 @@ export type SyncStatus = "idle" | "syncing" | "synced" | "failed";
 export interface LocalTasksState {
   readonly ready: boolean;
   readonly tasks: TaskDto[];
+  readonly tags: TagDto[];
   readonly pending: number;
   readonly persistent: boolean;
   readonly online: boolean;
@@ -28,6 +29,7 @@ export const useLocalTasks = () => {
   const [state, setState] = useState<LocalTasksState>({
     ready: false,
     tasks: [],
+    tags: [],
     pending: 0,
     persistent: true,
     online: navigator.onLine,
@@ -108,7 +110,40 @@ export const useLocalTasks = () => {
     return null;
   };
 
+  /** 操作を実行して一覧を更新し、成功したら同期を予約する。失敗時は利用者向けの文言を返す */
+  const perform = async (
+    request: Parameters<LocalClient["request"]>[0],
+  ): Promise<string | null> => {
+    const { error } = (await getClient().request(request)) as { error: string | null };
+    await refresh();
+    if (error !== null) return errorMessage(error);
+    scheduleSync();
+    return null;
+  };
+
+  /** タグを作る。成功したら新しいタグの ID を返す */
+  const createTag = async (name: string): Promise<{ id: string | null; error: string | null }> => {
+    const result = await getClient().request({ type: "createTag", name });
+    await refresh();
+    if (result.error !== null) return { id: null, error: errorMessage(result.error) };
+    scheduleSync();
+    return { id: result.id, error: null };
+  };
+  const renameTag = (id: string, name: string) => perform({ type: "renameTag", id, name });
+  const recolorTag = (id: string, color: string) => perform({ type: "recolorTag", id, color });
+  const deleteTag = (id: string) => perform({ type: "deleteTag", id });
+
   const dismissRejections = () => setState((s) => ({ ...s, rejections: [] }));
 
-  return { state, createTask, changeStatus, editTask, dismissRejections };
+  return {
+    state,
+    createTask,
+    changeStatus,
+    editTask,
+    createTag,
+    renameTag,
+    recolorTag,
+    deleteTag,
+    dismissRejections,
+  };
 };

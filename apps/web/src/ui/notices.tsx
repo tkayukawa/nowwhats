@@ -28,10 +28,3 @@ export const RejectionNotice = ({
     </button>
   </div>
 );
-
-export const ComingSoon = ({ title, children }: { title: string; children: string }) => (
-  <section className="grid gap-2 px-2 py-12">
-    <h1 className="text-xl font-bold text-balance">{title}</h1>
-    <p className="max-w-[36em] text-muted">{children}</p>
-  </section>
-);

@@ -23,6 +23,7 @@ describe("CreateTask", () => {
         priority: "medium",
         dueDate: null,
         storyPoints: 1,
+        tagIds: [],
         completedAt: null,
         version: 1,
       },

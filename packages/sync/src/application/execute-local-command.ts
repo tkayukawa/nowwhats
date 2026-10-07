@@ -1,10 +1,13 @@
 import type { OwnerId, Result } from "@nowwhats/shared-kernel";
 import {
   ChangeTaskStatus,
+  CreateTag,
   CreateTask,
+  DeleteTag,
   EditTask,
+  RecolorTag,
+  RenameTag,
   type Clock,
-  type TaskDto,
 } from "@nowwhats/task-management";
 import type { LocalStore, LocalTransaction } from "./client-ports.ts";
 import { executeCommand, fixedClock } from "./execute-command.ts";
@@ -21,12 +24,19 @@ export const executeLocally = (
   tx: LocalTransaction,
   command: TaskCommand,
   context: ClientContext,
-): Promise<Result<TaskDto, CommandError>> =>
-  executeCommand(command, context.ownerId, {
-    createTask: new CreateTask({ repository: tx.tasks, clock: context.clock }),
-    changeTaskStatus: new ChangeTaskStatus({ repository: tx.tasks, clock: context.clock }),
-    editTask: new EditTask({ repository: tx.tasks, clock: context.clock }),
+): Promise<Result<unknown, CommandError>> => {
+  const tasks = { repository: tx.tasks, clock: context.clock };
+  const tags = { tags: tx.tags };
+  return executeCommand(command, context.ownerId, {
+    createTask: new CreateTask(tasks),
+    changeTaskStatus: new ChangeTaskStatus(tasks),
+    editTask: new EditTask(tasks),
+    createTag: new CreateTag(tags),
+    renameTag: new RenameTag(tags),
+    recolorTag: new RecolorTag(tags),
+    deleteTag: new DeleteTag(tags),
   });
+};
 
 export interface ExecuteLocalCommandDeps {
   readonly store: LocalStore;
@@ -46,7 +56,7 @@ export class ExecuteLocalCommand {
     this.deps = deps;
   }
 
-  execute(command: TaskCommand): Promise<Result<TaskDto, CommandError>> {
+  execute(command: TaskCommand): Promise<Result<unknown, CommandError>> {
     const now = this.deps.context.clock.now();
     return this.deps.store.transaction(async (tx) => {
       const result = await executeLocally(tx, command, {

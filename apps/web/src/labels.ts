@@ -34,6 +34,14 @@ const rejectedWhat = (command: RejectedChange["change"]["command"]): string => {
       return `の${ACTION_LABEL[command.action]}`;
     case "EditTask":
       return "の編集";
+    case "CreateTag":
+      return "（タグ）の作成";
+    case "RenameTag":
+      return "（タグ）の名前の変更";
+    case "RecolorTag":
+      return "（タグ）の色の変更";
+    case "DeleteTag":
+      return "（タグ）の削除";
   }
 };
 

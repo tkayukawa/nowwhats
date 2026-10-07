@@ -1,11 +1,11 @@
 import type { OwnerId } from "@nowwhats/shared-kernel";
-import type { TaskChangeFeed } from "./ports.ts";
+import type { ChangeFeed } from "./ports.ts";
 import type { PullResult } from "./sync-protocol.ts";
 
 export const PULL_LIMIT_MAX = 500;
 
 export interface PullChangesDeps {
-  readonly feed: TaskChangeFeed;
+  readonly feed: ChangeFeed;
   /** 変更ログの識別子（PullResult.epoch） */
   readonly epoch: string;
 }

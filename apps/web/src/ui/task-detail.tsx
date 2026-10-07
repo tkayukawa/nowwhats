@@ -2,6 +2,7 @@ import {
   availableActions,
   STORY_POINT_SCALE,
   type Priority,
+  type TagDto,
   type TaskAction,
   type TaskDto,
 } from "@nowwhats/task-management";
@@ -12,6 +13,7 @@ import type { TaskEdits } from "../local/protocol.ts";
 import { dueDateFromInput, dueDateFromToday, dueInfo } from "../task-view.ts";
 import { chip, ghostButton, primaryButton } from "./classes.ts";
 import { Markdown } from "./markdown.tsx";
+import { TagField } from "./tags.tsx";
 
 const ACTION_BUTTON: Record<TaskAction, string> = {
   start: "着手する",
@@ -38,14 +40,25 @@ const toDateInputValue = (iso: string | null): string => {
 
 export interface TaskDetailProps {
   readonly task: TaskDto;
+  readonly tags: readonly TagDto[];
   readonly today: Date;
+  /** 新しいタグを作る。成功したら ID、失敗したら null を返す */
+  readonly onCreateTag: (name: string) => Promise<string | null>;
   /** 失敗時は利用者向けのエラー文言を返す */
   readonly onEdit: (changes: TaskEdits) => Promise<string | null>;
   readonly onAction: (action: TaskAction) => void;
   readonly onClose: () => void;
 }
 
-export const TaskDetail = ({ task, today, onEdit, onAction, onClose }: TaskDetailProps) => {
+export const TaskDetail = ({
+  task,
+  tags,
+  today,
+  onCreateTag,
+  onEdit,
+  onAction,
+  onClose,
+}: TaskDetailProps) => {
   const [title, setTitle] = useState(task.title);
   const [editingDescription, setEditingDescription] = useState(false);
   const [draft, setDraft] = useState(task.description);
@@ -208,6 +221,17 @@ export const TaskDetail = ({ task, today, onEdit, onAction, onClose }: TaskDetai
           {due?.tone === "overdue" && (
             <span className="text-xs font-bold text-danger">{due.text}</span>
           )}
+        </dd>
+
+        <dt className="text-muted">タグ</dt>
+        <dd className="flex min-w-0">
+          <TagField
+            label="タスクのタグ"
+            tags={tags}
+            selectedIds={task.tagIds}
+            onChange={(tagIds) => void save({ tagIds })}
+            onCreate={onCreateTag}
+          />
         </dd>
 
         <dt className="text-muted">ポイント</dt>

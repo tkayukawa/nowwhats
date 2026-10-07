@@ -78,11 +78,11 @@ describe("SqliteLocalStore", () => {
     const db = await createTestDatabase();
 
     expect(() => migrate(db)).not.toThrow();
-    expect(db.all<{ user_version: number }>("PRAGMA user_version")).toEqual([{ user_version: 4 }]);
+    expect(db.all<{ user_version: number }>("PRAGMA user_version")).toEqual([{ user_version: 5 }]);
   });
 });
 
-describe("マイグレーション 2〜4（ポイント・説明文・完了日時）", () => {
+describe("マイグレーション 2〜5（ポイント・説明文・完了日時・タグ）", () => {
   it("ポイント導入前に保存されたタスクは 1 ポイントとして読み込まれる", async () => {
     const sqlite3 = await (await import("@sqlite.org/sqlite-wasm")).default();
     const { fromSqliteWasm } = await import("./sql-database.ts");
@@ -105,6 +105,7 @@ describe("マイグレーション 2〜4（ポイント・説明文・完了日�
       storyPoints: 1,
       description: "",
       completedAt: null,
+      tagIds: [],
     });
   });
 });

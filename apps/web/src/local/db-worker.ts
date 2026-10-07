@@ -8,7 +8,7 @@ import {
   type SyncApi,
   type TaskCommand,
 } from "@nowwhats/sync";
-import { ListTasks } from "@nowwhats/task-management";
+import { ListTags, ListTasks } from "@nowwhats/task-management";
 import { hc } from "hono/client";
 import type { LocalSnapshot, WorkerMessage, WorkerRequest } from "./protocol.ts";
 
@@ -28,9 +28,14 @@ const context: ClientContext = { ownerId: OwnerId.of("local"), clock: { now: () 
 
 const api = hc<AppType>(scope.location.origin);
 
+type PushChanges = Parameters<typeof api.api.sync.push.$post>[0]["json"]["changes"];
+
 const syncApi: SyncApi = {
   async push(changes) {
-    const res = await api.api.sync.push.$post({ json: { changes: [...changes] } });
+    // 操作の配列は readonly で扱っているが、API の入力型は可変の配列のため、送信時だけ型を合わせる
+    const res = await api.api.sync.push.$post({
+      json: { changes: changes as unknown as PushChanges },
+    });
     if (!res.ok) throw new Error(`push failed: ${res.status}`);
     return (await res.json()).results;
   },
@@ -55,6 +60,7 @@ const snapshot = async (): Promise<LocalSnapshot> => {
   const { store, persistent } = await app;
   return store.transaction(async (tx) => ({
     tasks: await new ListTasks({ repository: tx.tasks }).execute({ ownerId: context.ownerId }),
+    tags: await new ListTags({ tags: tx.tags }).execute({ ownerId: context.ownerId }),
     pending: await tx.outbox.count(),
     persistent,
   }));
@@ -76,6 +82,17 @@ const handle = async (request: WorkerRequest): Promise<unknown> => {
       return run({ type: "ChangeTaskStatus", id: request.id, action: request.action });
     case "editTask":
       return run({ type: "EditTask", id: request.id, changes: request.changes });
+    case "createTag": {
+      const id = uuidv7();
+      const { error } = await run({ type: "CreateTag", id, name: request.name });
+      return { id: error === null ? id : null, error };
+    }
+    case "renameTag":
+      return run({ type: "RenameTag", id: request.id, name: request.name });
+    case "recolorTag":
+      return run({ type: "RecolorTag", id: request.id, color: request.color });
+    case "deleteTag":
+      return run({ type: "DeleteTag", id: request.id });
     case "sync":
       return (await app).sync.execute();
   }

@@ -1,12 +1,13 @@
 import { OwnerId } from "@nowwhats/shared-kernel";
 import { describe, expect, it } from "vitest";
 import { PullChanges } from "./pull-changes.ts";
-import type { TaskChange } from "./sync-protocol.ts";
+import type { SyncChange } from "./sync-protocol.ts";
 
 const owner = OwnerId.of("u-1");
 
-const change = (seq: number): TaskChange => ({
+const change = (seq: number): SyncChange => ({
   seq,
+  kind: "task",
   task: {
     id: `0199b1a0-0000-7000-8000-${String(seq).padStart(12, "0")}`,
     title: String(seq),
@@ -15,12 +16,13 @@ const change = (seq: number): TaskChange => ({
     priority: "medium",
     dueDate: null,
     storyPoints: 1,
+    tagIds: [],
     completedAt: null,
     version: 1,
   },
 });
 
-const feedOf = (all: TaskChange[]) => ({
+const feedOf = (all: SyncChange[]) => ({
   since: (_ownerId: OwnerId, cursor: number, limit: number) =>
     Promise.resolve(all.filter((c) => c.seq > cursor).slice(0, limit)),
 });

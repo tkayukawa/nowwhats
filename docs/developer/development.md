@@ -72,7 +72,7 @@ packages/
     src/index.ts       # 公開 API（他パッケージはここからのみ import する）
   sync/                # 同期の取り決め（操作・結果の型）とユースケース（ADR 0006）
   insights/            # 実績（進捗・成果）の集計。タスク一覧から計算する読み取り専用のモデル
-  infrastructure-server/ # サーバー用 Adapter（現時点はメモリ上の Repository・変更ログ・処理済み記録）
+  infrastructure-server/ # サーバー用 Adapter（現時点はメモリ上のタスク・タグの Repository、共通の変更ログ、処理済み記録）
   infrastructure-client/ # クライアント用 Adapter（SQLite のローカル保存・マイグレーション・UUIDv7）
 apps/
   api/                 # Hono による HTTP API。src/main.ts が Composition Root
@@ -87,6 +87,7 @@ apps/
 - 色とフォントは `apps/web/src/styles.css` で CSS 変数（`--nw-*`）として定義し、`@theme inline` で Tailwind の色名（`bg-surface`、`text-muted`、`text-accent` など）に対応づけている。部品では色の値を直接書かず、この色名を使う。
 - ダークモードは端末の設定（`prefers-color-scheme`）に従う。変数の値だけを切り替えるので、部品側に `dark:` の指定は不要。
 - 日本語は端末のフォントを使い、ロゴと数字は同梱の Outfit（`@fontsource/outfit`）を使う（`font-mark`）。
+- タグの色は `--nw-tag-<色名>`（検証済みのカテゴリ配色。ライト・ダーク別の値）。タグは必ず「色の点 + 名前」で表示し、文字は通常の文字色にする（色だけで区別させない）。
 
 ### Markdown の表示
 

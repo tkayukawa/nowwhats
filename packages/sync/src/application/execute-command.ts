@@ -1,6 +1,14 @@
 import type { OwnerId, Result } from "@nowwhats/shared-kernel";
 import type { Clock } from "@nowwhats/task-management";
-import type { ChangeTaskStatus, CreateTask, EditTask, TaskDto } from "@nowwhats/task-management";
+import type {
+  ChangeTaskStatus,
+  CreateTag,
+  CreateTask,
+  DeleteTag,
+  EditTask,
+  RecolorTag,
+  RenameTag,
+} from "@nowwhats/task-management";
 import type { CommandError } from "./sync-protocol.ts";
 import type { TaskCommand } from "./task-command.ts";
 
@@ -8,6 +16,10 @@ export interface CommandUseCases {
   readonly createTask: Pick<CreateTask, "execute">;
   readonly changeTaskStatus: Pick<ChangeTaskStatus, "execute">;
   readonly editTask: Pick<EditTask, "execute">;
+  readonly createTag: Pick<CreateTag, "execute">;
+  readonly renameTag: Pick<RenameTag, "execute">;
+  readonly recolorTag: Pick<RecolorTag, "execute">;
+  readonly deleteTag: Pick<DeleteTag, "execute">;
 }
 
 /** 常に同じ日時を返す Clock。操作を、実行された日時で再実行するために使う */
@@ -27,7 +39,7 @@ export const executeCommand = (
   command: TaskCommand,
   ownerId: OwnerId,
   useCases: CommandUseCases,
-): Promise<Result<TaskDto, CommandError>> => {
+): Promise<Result<unknown, CommandError>> => {
   switch (command.type) {
     case "CreateTask":
       return useCases.createTask.execute({
@@ -39,6 +51,7 @@ export const executeCommand = (
           dueDate: command.dueDate === null ? null : new Date(command.dueDate),
         }),
         ...(command.storyPoints !== undefined && { storyPoints: command.storyPoints }),
+        ...(command.tagIds !== undefined && { tagIds: command.tagIds }),
       });
     case "ChangeTaskStatus":
       return useCases.changeTaskStatus.execute({ ownerId, id: command.id, action: command.action });
@@ -53,5 +66,18 @@ export const executeCommand = (
         },
       });
     }
+    case "CreateTag":
+      return useCases.createTag.execute({
+        ownerId,
+        id: command.id,
+        name: command.name,
+        color: command.color,
+      });
+    case "RenameTag":
+      return useCases.renameTag.execute({ ownerId, id: command.id, name: command.name });
+    case "RecolorTag":
+      return useCases.recolorTag.execute({ ownerId, id: command.id, color: command.color });
+    case "DeleteTag":
+      return useCases.deleteTag.execute({ ownerId, id: command.id });
   }
 };

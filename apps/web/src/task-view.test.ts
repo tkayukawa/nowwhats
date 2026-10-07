@@ -7,6 +7,7 @@ import {
   dueInfo,
   groupTasks,
   matchesDueFilter,
+  resolveTags,
   sumPoints,
 } from "./task-view.ts";
 
@@ -21,6 +22,7 @@ const task = (overrides: Partial<TaskDto>): TaskDto => ({
   priority: "medium",
   dueDate: null,
   storyPoints: 1,
+  tagIds: [],
   completedAt: null,
   version: 1,
   ...overrides,
@@ -90,5 +92,14 @@ describe("dueDateFromInput", () => {
   it("日付の入力値を端末のタイムゾーンの 0 時として扱う", () => {
     expect(dueDateFromInput("2026-10-12")).toBe(new Date(2026, 9, 12).toISOString());
     expect(dueDateFromInput("")).toBeNull();
+  });
+});
+
+describe("resolveTags", () => {
+  it("付けた順にタグを返し、削除済みのタグは外す", () => {
+    const work = { id: "t-1", name: "仕事", color: "blue", version: 1 };
+    const home = { id: "t-2", name: "家", color: "orange", version: 1 };
+
+    expect(resolveTags(["t-2", "deleted", "t-1"], [work, home])).toEqual([home, work]);
   });
 });

@@ -3,6 +3,7 @@ import type { Priority } from "../domain/priority.ts";
 import { StoryPoint, type StoryPointError } from "../domain/story-point.ts";
 import type { TaskChanges } from "../domain/task.ts";
 import { TaskDescription, type TaskDescriptionError } from "../domain/task-description.ts";
+import { parseTaskTags, type TaskTagsError } from "../domain/task-tags.ts";
 import { TaskId, type TaskIdError } from "../domain/task-id.ts";
 import type { TaskRepository } from "../domain/task-repository.ts";
 import { TaskTitle, type TaskTitleError } from "../domain/task-title.ts";
@@ -17,6 +18,8 @@ export interface EditTaskChanges {
   /** null は期限なしにする */
   readonly dueDate?: Date | null | undefined;
   readonly storyPoints?: number | undefined;
+  /** タグの ID の集合で置き換える（最大 10 個） */
+  readonly tagIds?: readonly string[] | undefined;
 }
 
 export interface EditTaskInput {
@@ -30,6 +33,7 @@ export type EditTaskError =
   | TaskTitleError
   | TaskDescriptionError
   | StoryPointError
+  | TaskTagsError
   | { readonly type: "TaskNotFound" };
 
 export interface EditTaskDeps {
@@ -66,7 +70,7 @@ export class EditTask {
 
 const parseChanges = (
   input: EditTaskChanges,
-): Result<TaskChanges, TaskTitleError | TaskDescriptionError | StoryPointError> => {
+): Result<TaskChanges, TaskTitleError | TaskDescriptionError | StoryPointError | TaskTagsError> => {
   const title = input.title === undefined ? null : TaskTitle.create(input.title);
   if (title !== null && !title.ok) return title;
   const description =
@@ -74,11 +78,14 @@ const parseChanges = (
   if (description !== null && !description.ok) return description;
   const storyPoints = input.storyPoints === undefined ? null : StoryPoint.parse(input.storyPoints);
   if (storyPoints !== null && !storyPoints.ok) return storyPoints;
+  const tagIds = input.tagIds === undefined ? null : parseTaskTags(input.tagIds);
+  if (tagIds !== null && !tagIds.ok) return tagIds;
   return ok({
     ...(title !== null && { title: title.value }),
     ...(description !== null && { description: description.value }),
     ...(input.priority !== undefined && { priority: input.priority }),
     ...(input.dueDate !== undefined && { dueDate: input.dueDate }),
     ...(storyPoints !== null && { storyPoints: storyPoints.value }),
+    ...(tagIds !== null && { tagIds: tagIds.value }),
   });
 };

@@ -1,4 +1,4 @@
-import type { TaskAction, TaskDto } from "@nowwhats/task-management";
+import type { TagDto, TaskAction, TaskDto } from "@nowwhats/task-management";
 import { useState } from "react";
 import { groupTasks, sumPoints } from "../task-view.ts";
 import { TaskRow } from "./task-row.tsx";
@@ -15,13 +15,14 @@ const Points = ({ value, prefix = "" }: { value: number; prefix?: string }) => (
 
 export interface TaskListProps {
   readonly tasks: readonly TaskDto[];
+  readonly tags: readonly TagDto[];
   readonly today: Date;
   readonly selectedId: string | null;
   readonly onAction: (id: string, action: TaskAction) => void;
   readonly onOpen: (id: string) => void;
 }
 
-export const TaskList = ({ tasks, today, selectedId, onAction, onOpen }: TaskListProps) => {
+export const TaskList = ({ tasks, tags, today, selectedId, onAction, onOpen }: TaskListProps) => {
   const [closedOpen, setClosedOpen] = useState(false);
   const groups = groupTasks(tasks);
   const open = [
@@ -35,6 +36,7 @@ export const TaskList = ({ tasks, today, selectedId, onAction, onOpen }: TaskLis
         <TaskRow
           key={t.id}
           task={t}
+          tags={tags}
           today={today}
           selected={t.id === selectedId}
           onAction={onAction}

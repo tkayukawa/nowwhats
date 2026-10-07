@@ -1,4 +1,4 @@
-import type { TaskDto, TaskStatus } from "@nowwhats/task-management";
+import type { TagDto, TaskDto, TaskStatus } from "@nowwhats/task-management";
 
 /** 一覧の表示に関する判断（並び順・絞り込み・期限の表示）。画面の部品から切り離してテストする。 */
 
@@ -84,3 +84,7 @@ export const dueDateFromInput = (value: string): string | null => {
   if (y === undefined || m === undefined || d === undefined || Number.isNaN(y + m + d)) return null;
   return new Date(y, m - 1, d).toISOString();
 };
+
+/** ID の一覧から、存在するタグだけを指定した順で返す（削除済みのタグは表示しない。ADR 0007） */
+export const resolveTags = (ids: readonly string[], tags: readonly TagDto[]): TagDto[] =>
+  ids.flatMap((id) => tags.filter((t) => t.id === id));

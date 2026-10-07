@@ -5,6 +5,7 @@ import type { LocalTasksState } from "./local/use-local-tasks.ts";
 const state = (overrides: Partial<LocalTasksState>): LocalTasksState => ({
   ready: true,
   tasks: [],
+  tags: [],
   pending: 0,
   persistent: true,
   online: true,

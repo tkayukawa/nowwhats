@@ -3,6 +3,7 @@ import type { Priority } from "../domain/priority.ts";
 import { DEFAULT_STORY_POINT, StoryPoint } from "../domain/story-point.ts";
 import { Task } from "../domain/task.ts";
 import { TaskDescription } from "../domain/task-description.ts";
+import { parseTaskTags } from "../domain/task-tags.ts";
 import { TaskId } from "../domain/task-id.ts";
 import type { TaskStatus } from "../domain/task-status.ts";
 import { TaskTitle } from "../domain/task-title.ts";
@@ -17,6 +18,7 @@ export interface TaskDto {
   readonly priority: Priority;
   readonly dueDate: string | null;
   readonly storyPoints: number;
+  readonly tagIds: readonly string[];
   /** ISO 8601。完了のときだけ値を持つ */
   readonly completedAt: string | null;
   readonly version: number;
@@ -32,6 +34,7 @@ export const toTaskDto = (task: Task): TaskDto => {
     priority: s.priority,
     dueDate: s.dueDate?.toISOString() ?? null,
     storyPoints: s.storyPoints,
+    tagIds: [...s.tagIds],
     completedAt: s.completedAt?.toISOString() ?? null,
     version: s.version,
   };
@@ -49,7 +52,9 @@ export const fromTaskDto = (dto: TaskDto, ownerId: OwnerId): Task | null => {
   const description = TaskDescription.create(
     typeof dto.description === "string" ? dto.description : "",
   );
-  if (!id.ok || !title.ok || !storyPoints.ok || !description.ok) {
+  // タグの導入前に保存された DTO には tagIds がないため、タグなしとして扱う
+  const tagIds = parseTaskTags(Array.isArray(dto.tagIds) ? dto.tagIds : []);
+  if (!id.ok || !title.ok || !storyPoints.ok || !description.ok || !tagIds.ok) {
     return null;
   }
   return Task.reconstruct({
@@ -61,6 +66,7 @@ export const fromTaskDto = (dto: TaskDto, ownerId: OwnerId): Task | null => {
     priority: dto.priority,
     dueDate: dto.dueDate === null ? null : new Date(dto.dueDate),
     storyPoints: storyPoints.value,
+    tagIds: tagIds.value,
     // 完了日時の導入前に保存された DTO には completedAt がないため、記録なしとして扱う
     completedAt: typeof dto.completedAt === "string" ? new Date(dto.completedAt) : null,
     version: dto.version,
