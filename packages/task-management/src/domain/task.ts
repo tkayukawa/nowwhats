@@ -44,6 +44,15 @@ const EVENT_TYPE = {
   reopen: "TaskReopened",
 } as const satisfies Record<TaskAction, TaskEvent["type"]>;
 
+/** 状態が変わった記録（実績の累積フロー図に使う） */
+export interface StatusChange {
+  readonly status: TaskStatus;
+  readonly at: Date;
+}
+
+/** 状態の履歴として保持する件数の上限（古いものから捨てる） */
+export const STATUS_HISTORY_MAX = 100;
+
 export interface TaskSnapshot {
   readonly id: TaskId;
   readonly ownerId: OwnerId;
@@ -57,6 +66,11 @@ export interface TaskSnapshot {
   readonly tagIds: readonly TagId[];
   /** 完了した日時。完了のときだけ値を持ち、再開すると消える（実績の集計に使う） */
   readonly completedAt: Date | null;
+  /**
+   * 状態の履歴（古い順）。登録時の todo から始まる。
+   * 履歴の記録を始める前に登録したタスクは空で、その後の状態の変更から記録される
+   */
+  readonly statusHistory: readonly StatusChange[];
   /** 更新ごとに増える版。同期時の競合検出に使う（ADR 0002） */
   readonly version: number;
 }
@@ -119,6 +133,7 @@ export class Task {
       storyPoints: params.storyPoints ?? DEFAULT_STORY_POINT,
       tagIds: params.tagIds ?? [],
       completedAt: null,
+      statusHistory: [{ status: "todo", at: params.now }],
       version: 1,
     });
     task.record("TaskCreated", params.now);
@@ -204,6 +219,7 @@ export class Task {
       ...this.state,
       status,
       completedAt: status === "done" ? now : null,
+      statusHistory: [...this.state.statusHistory, { status, at: now }].slice(-STATUS_HISTORY_MAX),
       version: this.state.version + 1,
     };
     this.record(EVENT_TYPE[action], now);

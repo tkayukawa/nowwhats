@@ -18,6 +18,7 @@ const change = (seq: number): SyncChange => ({
     storyPoints: 1,
     tagIds: [],
     completedAt: null,
+    statusHistory: [],
     version: 1,
   },
 });

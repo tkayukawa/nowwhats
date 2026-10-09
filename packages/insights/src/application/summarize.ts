@@ -120,3 +120,73 @@ export const recentCompletionsByDay = (
     items,
   }));
 };
+
+export interface StatusCounts {
+  /** その日の終わり（今日は現在時刻）時点の件数 */
+  readonly date: Date;
+  readonly todo: number;
+  readonly doing: number;
+  readonly done: number;
+}
+
+/**
+ * 日ごとの状態別の件数（累積フロー図用）。古い日から順に days 日分（今日を含む）。
+ * 各日の終わりの時点で、状態の履歴から各タスクの状態を求める。中止は数えない。
+ * 履歴の記録を始める前に登録したタスクは、最初の記録以降だけを数える。
+ */
+export const dailyStatusCounts = (
+  tasks: readonly TaskDto[],
+  now: Date,
+  days = 28,
+): StatusCounts[] => {
+  const histories = tasks
+    .map((t) => t.statusHistory.map((h) => ({ status: h.status, at: new Date(h.at) })))
+    .filter((h) => h.length > 0);
+  const today = startOfDay(now);
+  return Array.from({ length: days }, (_, i) => {
+    const date = addDays(today, -(days - 1 - i));
+    const end = i === days - 1 ? now : addDays(date, 1);
+    const counts = { todo: 0, doing: 0, done: 0 };
+    for (const history of histories) {
+      const last = history.filter((h) => h.at < end).at(-1);
+      if (last !== undefined && last.status !== "canceled") counts[last.status] += 1;
+    }
+    return { date, ...counts };
+  });
+};
+
+export interface TagTotal {
+  /** null は「タグなし」 */
+  readonly tagId: string | null;
+  readonly points: number;
+  readonly count: number;
+}
+
+/**
+ * タグ別の完了ポイントと件数（from 以降に完了したもの。null はすべての期間）。
+ * 複数のタグが付いたタスクは、それぞれのタグに全ポイントを数える（合計は完了ポイントの総数より多くなる）。
+ * 存在しないタグ（削除済み）は数えず、有効なタグが 1 つもないタスクは「タグなし」に数える。
+ * ポイントの多い順に並べ、「タグなし」は最後にする。
+ */
+export const completionsByTag = (
+  tasks: readonly TaskDto[],
+  tagIds: readonly string[],
+  from: Date | null,
+): TagTotal[] => {
+  const known = new Set(tagIds);
+  const totals = new Map<string | null, { points: number; count: number }>();
+  for (const t of tasks) {
+    if (t.status !== "done" || t.completedAt === null) continue;
+    if (from !== null && new Date(t.completedAt) < from) continue;
+    const tags = t.tagIds.filter((id) => known.has(id));
+    for (const key of tags.length > 0 ? tags : [null]) {
+      const total = totals.get(key) ?? { points: 0, count: 0 };
+      totals.set(key, { points: total.points + t.storyPoints, count: total.count + 1 });
+    }
+  }
+  return [...totals.entries()]
+    .map(([tagId, total]) => ({ tagId, ...total }))
+    .sort((a, b) =>
+      a.tagId === null ? 1 : b.tagId === null ? -1 : b.points - a.points || b.count - a.count,
+    );
+};

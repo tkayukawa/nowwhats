@@ -24,6 +24,7 @@ const task = (overrides: Partial<TaskDto>): TaskDto => ({
   storyPoints: 1,
   tagIds: [],
   completedAt: null,
+  statusHistory: [],
   version: 1,
   ...overrides,
 });

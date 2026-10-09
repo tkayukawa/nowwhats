@@ -1,5 +1,12 @@
 export { Task, availableActions } from "./domain/task.ts";
-export type { TaskAction, TaskChanges, TaskSnapshot, TaskTransitionError } from "./domain/task.ts";
+export { STATUS_HISTORY_MAX } from "./domain/task.ts";
+export type {
+  StatusChange,
+  TaskAction,
+  TaskChanges,
+  TaskSnapshot,
+  TaskTransitionError,
+} from "./domain/task.ts";
 export { TaskDescription, TASK_DESCRIPTION_MAX_LENGTH } from "./domain/task-description.ts";
 export type { TaskDescriptionError } from "./domain/task-description.ts";
 export { TaskId } from "./domain/task-id.ts";

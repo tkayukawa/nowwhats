@@ -1,5 +1,7 @@
 import {
+  completionsByTag,
   completionsOf,
+  dailyStatusCounts,
   dailyCompletions,
   recentCompletionsByDay,
   startOfDay,
@@ -7,10 +9,12 @@ import {
   summarizeWeeks,
   weeklyCompletions,
 } from "@nowwhats/insights";
-import type { TaskDto } from "@nowwhats/task-management";
+import type { TagDto, TaskDto } from "@nowwhats/task-management";
 import { useState, type ReactNode } from "react";
 import { ghostButton } from "../classes.ts";
 import { ActivityCalendar } from "./activity-calendar.tsx";
+import { StatusFlowChart, StatusFlowTable, StatusLegend } from "./status-flow-chart.tsx";
+import { TagChart, type TagMetric } from "./tag-chart.tsx";
 import { formatDay, formatDelta } from "./format.ts";
 import { VelocityChart, VelocityTable } from "./velocity-chart.tsx";
 
@@ -59,14 +63,30 @@ const Panel = ({
   </section>
 );
 
+type TagPeriod = "week" | "4weeks" | "all";
+
+const TAG_PERIODS: { value: TagPeriod; label: string }[] = [
+  { value: "week", label: "今週" },
+  { value: "4weeks", label: "直近 4 週" },
+  { value: "all", label: "すべて" },
+];
+
+const segment =
+  "rounded-md px-2.5 py-0.5 text-xs text-muted aria-pressed:bg-surface aria-pressed:font-bold aria-pressed:text-fg aria-pressed:shadow-sm";
+
 export const InsightsView = ({
   tasks,
+  tags,
   today,
 }: {
   readonly tasks: readonly TaskDto[];
+  readonly tags: readonly TagDto[];
   readonly today: Date;
 }) => {
   const [asTable, setAsTable] = useState(false);
+  const [flowAsTable, setFlowAsTable] = useState(false);
+  const [tagPeriod, setTagPeriod] = useState<TagPeriod>("4weeks");
+  const [tagMetric, setTagMetric] = useState<TagMetric>("points");
   const completions = completionsOf(tasks);
   const weekly = weeklyCompletions(completions, today, 8);
   const summary = summarizeWeeks(weekly);
@@ -75,6 +95,20 @@ export const InsightsView = ({
   const weekStart = startOfWeek(today);
   const weekEnd = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6);
   const todayKey = startOfDay(today).getTime();
+  const statusCounts = dailyStatusCounts(tasks, today, 28);
+  const tagFrom =
+    tagPeriod === "all"
+      ? null
+      : new Date(
+          weekStart.getFullYear(),
+          weekStart.getMonth(),
+          weekStart.getDate() - (tagPeriod === "week" ? 0 : 21),
+        );
+  const tagTotals = completionsByTag(
+    tasks,
+    tags.map((t) => t.id),
+    tagFrom,
+  );
   const yesterdayKey = new Date(
     today.getFullYear(),
     today.getMonth(),
@@ -130,6 +164,80 @@ export const InsightsView = ({
         ) : (
           <VelocityChart weekly={weekly} average={summary.averagePoints} />
         )}
+      </Panel>
+
+      <Panel
+        title="状態の推移"
+        note="日ごとの件数（累積フロー図）・直近 4 週"
+        action={
+          <button
+            type="button"
+            aria-pressed={flowAsTable}
+            onClick={() => setFlowAsTable((v) => !v)}
+            className={`${ghostButton} py-0.5 text-xs`}
+          >
+            {flowAsTable ? "グラフで見る" : "表で見る"}
+          </button>
+        }
+      >
+        <StatusLegend />
+        {flowAsTable ? (
+          <StatusFlowTable counts={statusCounts} />
+        ) : (
+          <StatusFlowChart counts={statusCounts} />
+        )}
+        <p className="text-xs text-muted">
+          状態の履歴の記録を始める前に登録したタスクは、記録を始めた後の状態の変更から数えます。中止したタスクは数えません。
+        </p>
+      </Panel>
+
+      <Panel
+        title="タグ別の完了"
+        note={tagMetric === "points" ? "完了ポイント" : "完了件数"}
+        action={
+          <div className="flex flex-wrap gap-2">
+            <div role="group" aria-label="期間" className="flex gap-0.5 rounded-lg bg-faint p-0.5">
+              {TAG_PERIODS.map((p) => (
+                <button
+                  key={p.value}
+                  type="button"
+                  aria-pressed={tagPeriod === p.value}
+                  onClick={() => setTagPeriod(p.value)}
+                  className={segment}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <div
+              role="group"
+              aria-label="数える対象"
+              className="flex gap-0.5 rounded-lg bg-faint p-0.5"
+            >
+              <button
+                type="button"
+                aria-pressed={tagMetric === "points"}
+                onClick={() => setTagMetric("points")}
+                className={segment}
+              >
+                ポイント
+              </button>
+              <button
+                type="button"
+                aria-pressed={tagMetric === "count"}
+                onClick={() => setTagMetric("count")}
+                className={segment}
+              >
+                件数
+              </button>
+            </div>
+          </div>
+        }
+      >
+        <TagChart totals={tagTotals} tags={tags} metric={tagMetric} />
+        <p className="text-xs text-muted">
+          複数のタグが付いたタスクは、それぞれのタグに数えます（合計は完了の総数より多くなります）。
+        </p>
       </Panel>
 
       <Panel title="活動カレンダー" note="日ごとの完了ポイント・直近 12 週">

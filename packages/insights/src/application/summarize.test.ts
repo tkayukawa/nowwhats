@@ -1,7 +1,9 @@
 import type { TaskDto } from "@nowwhats/task-management";
 import { describe, expect, it } from "vitest";
 import {
+  completionsByTag,
   completionsOf,
+  dailyStatusCounts,
   dailyCompletions,
   recentCompletionsByDay,
   startOfWeek,
@@ -24,6 +26,7 @@ const done = (id: number, points: number, completedAt: Date | null): TaskDto => 
   storyPoints: points,
   tagIds: [],
   completedAt: completedAt?.toISOString() ?? null,
+  statusHistory: [],
   version: 2,
 });
 
@@ -81,5 +84,68 @@ describe("recentCompletionsByDay", () => {
       [4, 5],
       [28, 8],
     ]);
+  });
+});
+
+describe("dailyStatusCounts", () => {
+  it("各日の終わりの状態で数え、中止と、登録前の日は数えない", () => {
+    const history = (...entries: [TaskDto["status"], Date][]) =>
+      entries.map(([status, at]) => ({ status, at: at.toISOString() }));
+    const tasks = [
+      // 10/5 登録 → 10/6 着手 → 10/7 9:00 完了
+      {
+        ...done(1, 3, at(10, 7, 9)),
+        statusHistory: history(
+          ["todo", at(10, 5, 9)],
+          ["doing", at(10, 6, 9)],
+          ["done", at(10, 7, 9)],
+        ),
+      },
+      // 10/6 登録のまま
+      {
+        ...done(2, 1, null),
+        status: "todo" as const,
+        statusHistory: history(["todo", at(10, 6, 20)]),
+      },
+      // 10/5 登録 → 10/6 中止
+      {
+        ...done(3, 1, null),
+        status: "canceled" as const,
+        statusHistory: history(["todo", at(10, 5, 10)], ["canceled", at(10, 6, 10)]),
+      },
+      // 履歴の記録前のタスク（数えない）
+      { ...done(4, 1, null), status: "todo" as const, statusHistory: [] },
+    ];
+
+    const counts = dailyStatusCounts(tasks, today, 3);
+
+    expect(counts.map((c) => [c.date.getDate(), c.todo, c.doing, c.done])).toEqual([
+      [5, 2, 0, 0],
+      [6, 1, 1, 0],
+      [7, 1, 0, 1], // 今日（15:00 時点）
+    ]);
+  });
+});
+
+describe("completionsByTag", () => {
+  it("タグごとに完了ポイントと件数を数え、複数タグは重複して数え、削除済みのタグは外す", () => {
+    const tasks = [
+      { ...done(1, 3, at(10, 6)), tagIds: ["work", "money"] },
+      { ...done(2, 5, at(10, 6)), tagIds: ["work"] },
+      { ...done(3, 2, at(10, 6)), tagIds: ["deleted"] }, // 有効なタグがない → タグなし
+      { ...done(4, 8, at(9, 1)), tagIds: ["money"] }, // 期間外
+    ];
+
+    expect(completionsByTag(tasks, ["work", "money"], new Date(2026, 9, 5))).toEqual([
+      { tagId: "work", points: 8, count: 2 },
+      { tagId: "money", points: 3, count: 1 },
+      { tagId: null, points: 2, count: 1 },
+    ]);
+    // 期間を指定しなければ、期間外の完了も数える（お金が 11 pt で 1 位になる）
+    expect(completionsByTag(tasks, ["work", "money"], null)[0]).toEqual({
+      tagId: "money",
+      points: 11,
+      count: 2,
+    });
   });
 });
