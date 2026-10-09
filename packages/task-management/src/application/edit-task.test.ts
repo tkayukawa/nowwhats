@@ -46,6 +46,7 @@ describe("EditTask", () => {
         storyPoints: 5,
         tagIds: [],
         completedAt: null,
+        statusHistory: [{ status: "todo", at: "2026-10-05T00:00:00.000Z" }],
         version: 2,
       },
     });

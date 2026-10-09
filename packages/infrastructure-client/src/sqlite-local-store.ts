@@ -36,6 +36,7 @@ type TaskRow = {
   story_points: number;
   tag_ids: string;
   completed_at: string | null;
+  status_history: string;
   version: number;
 };
 
@@ -70,6 +71,12 @@ const toTask = (row: TaskRow, ownerId: OwnerId): Task => {
       return tagId.ok ? [tagId.value] : [];
     }),
     completedAt: row.completed_at === null ? null : new Date(row.completed_at),
+    statusHistory: (JSON.parse(row.status_history) as { status: string; at: string }[]).flatMap(
+      (h) => {
+        const known = TASK_STATUSES.find((s) => s === h.status);
+        return known === undefined ? [] : [{ status: known, at: new Date(h.at) }];
+      },
+    ),
     version: row.version,
   });
 };
@@ -97,14 +104,14 @@ class SqliteTaskRepository implements LocalTaskRepository {
   save(task: Task): Promise<void> {
     const s = task.toSnapshot();
     this.db.run(
-      `INSERT INTO tasks (id, owner_id, title, description, status, priority, due_date, story_points, tag_ids, completed_at, version)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO tasks (id, owner_id, title, description, status, priority, due_date, story_points, tag_ids, completed_at, status_history, version)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (id) DO UPDATE SET
          owner_id = excluded.owner_id, title = excluded.title, description = excluded.description,
          status = excluded.status,
          priority = excluded.priority, due_date = excluded.due_date,
          story_points = excluded.story_points, tag_ids = excluded.tag_ids,
-         completed_at = excluded.completed_at,
+         completed_at = excluded.completed_at, status_history = excluded.status_history,
          version = excluded.version`,
       [
         s.id,
@@ -117,6 +124,7 @@ class SqliteTaskRepository implements LocalTaskRepository {
         s.storyPoints,
         JSON.stringify(s.tagIds),
         s.completedAt?.toISOString() ?? null,
+        JSON.stringify(s.statusHistory.map((h) => ({ status: h.status, at: h.at.toISOString() }))),
         s.version,
       ],
     );

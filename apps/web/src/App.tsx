@@ -100,7 +100,7 @@ export const App = () => {
           )}
         </>
       )}
-      {view === "insights" && <InsightsView tasks={state.tasks} today={today} />}
+      {view === "insights" && <InsightsView tasks={state.tasks} tags={state.tags} today={today} />}
       {view === "settings" && (
         <SettingsView
           tags={state.tags}

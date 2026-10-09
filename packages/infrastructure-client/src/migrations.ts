@@ -50,6 +50,8 @@ const MIGRATIONS: readonly string[] = [
     data TEXT NOT NULL
   );
   `,
+  // 6: 状態の履歴（実績の累積フロー図用）。ステータスと日時の JSON 配列。既存は記録なし
+  `ALTER TABLE tasks ADD COLUMN status_history TEXT NOT NULL DEFAULT '[]';`,
 ];
 
 /** 未適用のマイグレーションを順に適用する。適用済みの数は PRAGMA user_version で管理する。 */

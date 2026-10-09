@@ -246,7 +246,13 @@ describe("同期（クライアント 2 台 + サーバー）", () => {
     const b = await createClient(server);
     await b.sync();
     for (const client of [a, b]) {
-      expect((await client.tasks())[0]?.completedAt).toBe("2026-10-05T09:30:00.000Z");
+      const task = (await client.tasks())[0];
+      expect(task?.completedAt).toBe("2026-10-05T09:30:00.000Z");
+      // 状態の履歴も、同期した日時ではなく操作した日時で残る
+      expect(task?.statusHistory).toEqual([
+        { status: "todo", at: "2026-10-05T00:00:00.000Z" },
+        { status: "done", at: "2026-10-05T09:30:00.000Z" },
+      ]);
     }
     serverTime.now = new Date("2026-10-05T00:00:00Z");
   });

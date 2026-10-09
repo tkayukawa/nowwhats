@@ -1,11 +1,11 @@
 import type { OwnerId } from "@nowwhats/shared-kernel";
 import type { Priority } from "../domain/priority.ts";
 import { DEFAULT_STORY_POINT, StoryPoint } from "../domain/story-point.ts";
-import { Task } from "../domain/task.ts";
+import { Task, type StatusChange } from "../domain/task.ts";
 import { TaskDescription } from "../domain/task-description.ts";
 import { parseTaskTags } from "../domain/task-tags.ts";
 import { TaskId } from "../domain/task-id.ts";
-import type { TaskStatus } from "../domain/task-status.ts";
+import { TASK_STATUSES, type TaskStatus } from "../domain/task-status.ts";
 import { TaskTitle } from "../domain/task-title.ts";
 
 /** ユースケースの外へ渡すタスクの表現。日時は ISO 8601 文字列にする。 */
@@ -21,6 +21,8 @@ export interface TaskDto {
   readonly tagIds: readonly string[];
   /** ISO 8601。完了のときだけ値を持つ */
   readonly completedAt: string | null;
+  /** 状態の履歴（古い順。日時は ISO 8601） */
+  readonly statusHistory: readonly { readonly status: TaskStatus; readonly at: string }[];
   readonly version: number;
 }
 
@@ -36,6 +38,7 @@ export const toTaskDto = (task: Task): TaskDto => {
     storyPoints: s.storyPoints,
     tagIds: [...s.tagIds],
     completedAt: s.completedAt?.toISOString() ?? null,
+    statusHistory: s.statusHistory.map((h) => ({ status: h.status, at: h.at.toISOString() })),
     version: s.version,
   };
 };
@@ -69,6 +72,20 @@ export const fromTaskDto = (dto: TaskDto, ownerId: OwnerId): Task | null => {
     tagIds: tagIds.value,
     // 完了日時の導入前に保存された DTO には completedAt がないため、記録なしとして扱う
     completedAt: typeof dto.completedAt === "string" ? new Date(dto.completedAt) : null,
+    // 履歴の導入前に保存された DTO には statusHistory がないため、記録なしとして扱う
+    statusHistory: parseStatusHistory(dto.statusHistory),
     version: dto.version,
   });
 };
+
+const parseStatusHistory = (value: unknown): StatusChange[] =>
+  Array.isArray(value)
+    ? value.flatMap((h: unknown) => {
+        if (typeof h !== "object" || h === null) return [];
+        const { status, at } = h as { status?: unknown; at?: unknown };
+        const known = TASK_STATUSES.find((s) => s === status);
+        return known !== undefined && typeof at === "string"
+          ? [{ status: known, at: new Date(at) }]
+          : [];
+      })
+    : [];

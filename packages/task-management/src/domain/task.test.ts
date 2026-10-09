@@ -56,6 +56,21 @@ describe("Task", () => {
     expect(task.toSnapshot().completedAt).toBeNull();
   });
 
+  it("登録と状態の変更を、日時付きで履歴に記録する", () => {
+    const task = newTask();
+    const t1 = new Date("2026-10-06T09:00:00Z");
+    const t2 = new Date("2026-10-07T18:00:00Z");
+
+    task.start(t1);
+    task.complete(t2);
+
+    expect(task.toSnapshot().statusHistory).toEqual([
+      { status: "todo", at: now },
+      { status: "doing", at: t1 },
+      { status: "done", at: t2 },
+    ]);
+  });
+
   it("canceled は reopen で todo に戻る", () => {
     const task = newTask();
     task.cancel(now);
