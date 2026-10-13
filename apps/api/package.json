@@ -15,6 +15,7 @@
   "dependencies": {
     "@hono/node-server": "2.1.1",
     "@hono/zod-validator": "0.9.1",
+    "@nowwhats/capture": "workspace:*",
     "@nowwhats/infrastructure-server": "workspace:*",
     "@nowwhats/shared-kernel": "workspace:*",
     "@nowwhats/sync": "workspace:*",

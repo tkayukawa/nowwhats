@@ -44,7 +44,8 @@ export interface LocalSnapshot {
 export interface WorkerResponseMap {
   init: LocalSnapshot;
   listTasks: LocalSnapshot;
-  createTask: { readonly error: string | null };
+  /** 登録したタスクの ID。失敗時は null と error */
+  createTask: { readonly id: string | null; readonly error: string | null };
   changeStatus: { readonly error: string | null };
   editTask: { readonly error: string | null };
   /** 作成したタグの ID。失敗時は null と error */

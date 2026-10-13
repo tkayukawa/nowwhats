@@ -12,8 +12,12 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
+    "@anthropic-ai/vertex-sdk": "0.20.2",
+    "@nowwhats/capture": "workspace:*",
     "@nowwhats/shared-kernel": "workspace:*",
     "@nowwhats/sync": "workspace:*",
-    "@nowwhats/task-management": "workspace:*"
+    "@nowwhats/task-management": "workspace:*",
+    "zod": "4.6.5"
   }
 }
