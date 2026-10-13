@@ -40,10 +40,15 @@ export const useLocalTasks = () => {
 
   const getClient = () => (client.current ??= new LocalClient());
 
-  const refresh = useCallback(async () => {
+  /** ローカル DB から最新の一覧を読み、画面の状態も更新する */
+  const load = useCallback(async () => {
     const snapshot = await getClient().request({ type: "listTasks" });
     setState((s) => ({ ...s, ...snapshot, ready: true }));
+    return snapshot;
   }, []);
+  const refresh = useCallback(async () => {
+    await load();
+  }, [load]);
 
   const sync = useCallback(async () => {
     if (!navigator.onLine) return;
@@ -86,12 +91,15 @@ export const useLocalTasks = () => {
   }, [refresh, sync, scheduleSync]);
 
   /** 失敗時は利用者向けのエラー文言を返す */
-  const createTask = async (task: NewTask): Promise<string | null> => {
-    const { error } = await getClient().request({ type: "createTask", task });
+  /** タスクを登録する。成功したら新しいタスクの ID を返す */
+  const createTask = async (
+    task: NewTask,
+  ): Promise<{ id: string | null; error: string | null }> => {
+    const result = await getClient().request({ type: "createTask", task });
     await refresh();
-    if (error !== null) return errorMessage(error);
+    if (result.error !== null) return { id: null, error: errorMessage(result.error) };
     scheduleSync();
-    return null;
+    return { id: result.id, error: null };
   };
 
   const changeStatus = async (id: string, action: TaskAction): Promise<string | null> => {
@@ -137,6 +145,7 @@ export const useLocalTasks = () => {
 
   return {
     state,
+    load,
     createTask,
     changeStatus,
     editTask,

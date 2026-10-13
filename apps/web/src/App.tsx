@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { isOpen, matchesDueFilter, type DueFilter } from "./task-view.ts";
+import { useAiCleanup } from "./local/use-ai-cleanup.ts";
 import { useLocalTasks } from "./local/use-local-tasks.ts";
 import { AppShell, type View } from "./ui/app-shell.tsx";
 import { CaptureForm } from "./ui/capture-form.tsx";
@@ -11,10 +12,12 @@ import { TagFilter } from "./ui/tag-filter.tsx";
 import { SyncBadge } from "./ui/sync-badge.tsx";
 import { TaskDetail } from "./ui/task-detail.tsx";
 import { TaskList } from "./ui/task-list.tsx";
+import { Toast } from "./ui/toast.tsx";
 
 export const App = () => {
   const {
     state,
+    load,
     createTask,
     changeStatus,
     editTask,
@@ -25,6 +28,22 @@ export const App = () => {
     dismissRejections,
   } = useLocalTasks();
   const [tagFilter, setTagFilter] = useState<string | null>(null);
+  const ai = useAiCleanup({
+    load,
+    online: state.online,
+    synced: state.syncStatus === "synced",
+    editTask,
+    createTag,
+  });
+  /** 登録する。「AI で清書して登録」のときは、登録してから清書する（ADR 0008） */
+  const handleCreate = async (
+    task: Parameters<typeof createTask>[0],
+    { withCleanup }: { readonly withCleanup: boolean },
+  ): Promise<string | null> => {
+    const { id, error } = await createTask(task);
+    if (error === null && id !== null && withCleanup) void ai.cleanUp(id);
+    return error;
+  };
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [view, setView] = useState<View>("tasks");
   const [filter, setFilter] = useState<DueFilter>("all");
@@ -61,7 +80,7 @@ export const App = () => {
             disabled={!state.ready}
             tags={state.tags}
             onCreateTag={handleCreateTag}
-            onSubmit={createTask}
+            onSubmit={handleCreate}
           />
           {actionError !== null && (
             <p role="alert" className="text-sm text-danger">
@@ -96,6 +115,9 @@ export const App = () => {
               onEdit={(changes) => editTask(selected.id, changes)}
               onAction={(action) => handleAction(selected.id, action)}
               onClose={() => setSelectedId(null)}
+              onCleanup={() => void ai.cleanUp(selected.id)}
+              cleaning={ai.running === selected.id}
+              online={state.online}
             />
           )}
         </>
@@ -110,6 +132,13 @@ export const App = () => {
           onDelete={deleteTag}
         />
       )}
+      {ai.undo !== null ? (
+        <Toast action={{ label: "元に戻す", onClick: () => void ai.undoCleanup() }}>
+          AI で清書しました:「{ai.undo.title}」
+        </Toast>
+      ) : ai.message !== null ? (
+        <Toast onDismiss={ai.dismissMessage}>{ai.message}</Toast>
+      ) : null}
     </AppShell>
   );
 };

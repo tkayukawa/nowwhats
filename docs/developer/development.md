@@ -30,6 +30,21 @@ pnpm run dev
   - 同じブラウザの 2 つ目のタブはメモリ保存に切り替わる（OPFS の SAH プール方式は同時に 1 タブのみ）。
 - ローカル DB を消すには、ブラウザの開発者ツールでサイトのデータ（ストレージ）を削除する。
 
+### AI 清書（ADR 0008）
+
+- 既定では Vertex AI を呼ばない **偽の実装**（`FakeTaskCleaner`）で動く。「明日」「今日」→ 期限、「至急」「急ぎ」→ 優先度 高、「いつか」→ 優先度 低に整える。
+- 本物の Vertex AI（Claude Haiku 5.5）を使うときは、API サーバーの起動時に環境変数を設定する。認証は ADC で、API キーは使わない。
+
+  ```bash
+  gcloud auth application-default login          # 開発者自身の認証（初回のみ）
+  NOWWHATS_VERTEX_PROJECT_ID=<PROJECT_ID> NOWWHATS_VERTEX_REGION=global pnpm run dev
+  ```
+
+  - 対象の GCP プロジェクトで、Vertex AI の Model Garden から Claude を使えるようにしておく必要がある。呼び出すたびに費用が発生する。
+
+- 利用者ごとに 1 日 50 回まで（メモリ上で数えるため、API サーバーを再起動すると回数は戻る）。
+- 送った内容と応答の本文はログに出さない。ログに出すのは停止理由・トークン数・所要時間だけ。
+
 ### 本番ビルドで確認する（Service Worker）
 
 ```bash

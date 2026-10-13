@@ -7,7 +7,7 @@ import {
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import type { NewTask } from "../local/protocol.ts";
 import { dueDateFromInput, dueDateFromToday, dueLabel } from "../task-view.ts";
-import { chip, chipSelected, primaryButton } from "./classes.ts";
+import { chip, chipSelected, ghostButton, primaryButton } from "./classes.ts";
 import { TagField } from "./tags.tsx";
 
 interface Draft {
@@ -29,8 +29,11 @@ export interface CaptureFormProps {
   readonly tags: readonly TagDto[];
   /** 新しいタグを作る。成功したら ID、失敗したら null を返す */
   readonly onCreateTag: (name: string) => Promise<string | null>;
-  /** 失敗時は利用者向けのエラー文言を返す */
-  readonly onSubmit: (task: NewTask) => Promise<string | null>;
+  /** 失敗時は利用者向けのエラー文言を返す。withCleanup は「AI で清書して登録」のとき true */
+  readonly onSubmit: (
+    task: NewTask,
+    options: { readonly withCleanup: boolean },
+  ) => Promise<string | null>;
 }
 
 export const CaptureForm = ({ disabled, tags, onCreateTag, onSubmit }: CaptureFormProps) => {
@@ -47,14 +50,18 @@ export const CaptureForm = ({ disabled, tags, onCreateTag, onSubmit }: CaptureFo
       ? dueLabel(draft.dueDate, today)
       : null;
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    const failure = await onSubmit({ title, ...draft });
+  const submit = async (withCleanup: boolean) => {
+    const failure = await onSubmit({ title, ...draft }, { withCleanup });
     setError(failure);
     if (failure === null) {
       setTitle("");
       setDraft(INITIAL);
     }
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    await submit(false);
   };
 
   // 日本語入力の変換確定の Enter では登録しない
@@ -88,6 +95,15 @@ export const CaptureForm = ({ disabled, tags, onCreateTag, onSubmit }: CaptureFo
             autoFocus
             className="min-w-0 flex-1 bg-transparent py-0.5 text-lg font-medium outline-none placeholder:text-muted/70"
           />
+          <button
+            type="button"
+            disabled={disabled || title.trim() === ""}
+            onClick={() => void submit(true)}
+            title="登録してから、タイトル・説明文・期限・優先度・ポイント・タグを AI で整えます"
+            className={`${ghostButton} py-1.5 whitespace-nowrap disabled:opacity-35 max-sm:hidden`}
+          >
+            AI で清書して登録
+          </button>
           <button
             type="submit"
             disabled={disabled || title.trim() === ""}

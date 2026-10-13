@@ -48,6 +48,10 @@ export interface TaskDetailProps {
   readonly onEdit: (changes: TaskEdits) => Promise<string | null>;
   readonly onAction: (action: TaskAction) => void;
   readonly onClose: () => void;
+  /** AI で清書する（ADR 0008） */
+  readonly onCleanup: () => void;
+  readonly cleaning: boolean;
+  readonly online: boolean;
 }
 
 export const TaskDetail = ({
@@ -58,6 +62,9 @@ export const TaskDetail = ({
   onEdit,
   onAction,
   onClose,
+  onCleanup,
+  cleaning,
+  online,
 }: TaskDetailProps) => {
   const [title, setTitle] = useState(task.title);
   const [editingDescription, setEditingDescription] = useState(false);
@@ -131,6 +138,19 @@ export const TaskDetail = ({
             {ACTION_BUTTON[action]}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={onCleanup}
+          disabled={cleaning || !online}
+          title={
+            online
+              ? "タイトル・説明文・期限・優先度・ポイント・タグを AI で整えます"
+              : "オンラインのときに使えます"
+          }
+          className={`${ghostButton} disabled:opacity-50`}
+        >
+          {cleaning ? "清書中…" : "AI で清書"}
+        </button>
         <button
           ref={closeRef}
           type="button"

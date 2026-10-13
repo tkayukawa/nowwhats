@@ -1,5 +1,7 @@
 import {
+  FakeTaskCleaner,
   InMemoryChangeLog,
+  InMemoryCleanupQuota,
   InMemoryProcessedChangeStore,
   InMemoryTagRepository,
   InMemoryTaskRepository,
@@ -20,6 +22,8 @@ const setup = (owner: OwnerId | null = OwnerId.of("u-1")) => {
     changeLogEpoch: "epoch-1",
     clock: { now: () => new Date("2026-10-05T00:00:00Z") },
     resolveOwner: () => Promise.resolve(owner),
+    cleaner: new FakeTaskCleaner(),
+    cleanupQuota: new InMemoryCleanupQuota(),
   });
 };
 
@@ -152,5 +156,40 @@ describe("API", () => {
         { seq: 3, kind: "tagDeleted", tagId: TAG },
       ],
     });
+  });
+
+  it("AI 清書: 清書結果を返し、1 日の上限を超えたら 429 を返す", async () => {
+    const app = setup();
+    const body = {
+      task: {
+        title: "至急 明日までに請求書を送る",
+        description: "",
+        dueDate: null,
+        priority: "medium",
+        storyPoints: 1,
+        tagNames: [],
+      },
+      existingTagNames: [],
+      today: "2026-10-09",
+      timeZone: "Asia/Tokyo",
+    };
+
+    const res = await app.request("/api/ai/cleanup", post(body));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      proposal: { title: "請求書を送る", dueDate: "2026-10-10", priority: "high" },
+    });
+
+    for (let i = 1; i < 50; i++) await app.request("/api/ai/cleanup", post(body));
+    const over = await app.request("/api/ai/cleanup", post(body));
+    expect(over.status).toBe(429);
+  });
+
+  it("AI 清書: 形式が不正なら 400 を返す", async () => {
+    const app = setup();
+
+    const res = await app.request("/api/ai/cleanup", post({ task: { title: "a" } }));
+
+    expect(res.status).toBe(400);
   });
 });

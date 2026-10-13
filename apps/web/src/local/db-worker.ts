@@ -76,8 +76,11 @@ const handle = async (request: WorkerRequest): Promise<unknown> => {
     case "init":
     case "listTasks":
       return snapshot();
-    case "createTask":
-      return run({ type: "CreateTask", id: uuidv7(), ...request.task });
+    case "createTask": {
+      const id = uuidv7();
+      const { error } = await run({ type: "CreateTask", id, ...request.task });
+      return { id: error === null ? id : null, error };
+    }
     case "changeStatus":
       return run({ type: "ChangeTaskStatus", id: request.id, action: request.action });
     case "editTask":

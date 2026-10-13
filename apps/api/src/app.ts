@@ -1,4 +1,5 @@
 import { zValidator } from "@hono/zod-validator";
+import { CleanUpTask, type CleanupQuota, type TaskCleaner } from "@nowwhats/capture";
 import type { OwnerId } from "@nowwhats/shared-kernel";
 import {
   ApplyPushedChanges,
@@ -37,6 +38,9 @@ export interface AppDeps {
   readonly changeLogEpoch: string;
   readonly clock: Clock;
   readonly resolveOwner: OwnerResolver;
+  /** AI 清書（ADR 0008） */
+  readonly cleaner: TaskCleaner;
+  readonly cleanupQuota: CleanupQuota;
 }
 
 const createTaskBody = z.object({
@@ -94,6 +98,23 @@ const pushBody = z.object({
     .max(PUSH_LIMIT_MAX),
 });
 
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** AI 清書の入力。送るのは 1 件のタスクの内容だけ（ADR 0008） */
+const cleanupBody = z.object({
+  task: z.object({
+    title: z.string().max(1_000),
+    description: z.string().max(100_000),
+    dueDate: z.string().regex(DATE).nullable(),
+    priority: z.enum(PRIORITIES),
+    storyPoints: z.number().int(),
+    tagNames: z.array(z.string().max(100)).max(20),
+  }),
+  existingTagNames: z.array(z.string().max(100)).max(500),
+  today: z.string().regex(DATE),
+  timeZone: z.string().max(64),
+});
+
 const pullQuery = z.object({
   cursor: z.coerce.number().int().min(0).default(0),
   limit: z.coerce.number().int().min(1).max(PULL_LIMIT_MAX).default(PULL_LIMIT_MAX),
@@ -117,6 +138,12 @@ export const createApp = (deps: AppDeps) => {
     }),
     clock: deps.clock,
     processedChanges: deps.processedChanges,
+  });
+  const cleanUpTask = new CleanUpTask({
+    cleaner: deps.cleaner,
+    quota: deps.cleanupQuota,
+    // 回数制限の「1 日」はサーバーの UTC の日付で区切る
+    currentDay: () => deps.clock.now().toISOString().slice(0, 10),
   });
   const pullChanges = new PullChanges({ feed: deps.changeFeed, epoch: deps.changeLogEpoch });
 
@@ -178,6 +205,20 @@ export const createApp = (deps: AppDeps) => {
         const { cursor, limit } = c.req.valid("query");
         const result = await pullChanges.execute({ ownerId: c.get("ownerId"), cursor, limit });
         return c.json(result, 200);
+      })
+      // AI 清書（ADR 0008）。結果を返すだけで、タスクは書き換えない（反映はクライアントが EditTask で行う）
+      .post("/ai/cleanup", zValidator("json", cleanupBody), async (c) => {
+        const result = await cleanUpTask.execute({
+          ownerId: c.get("ownerId"),
+          cleanup: c.req.valid("json"),
+        });
+        if (!result.ok) {
+          return c.json(
+            { error: result.error },
+            result.error.type === "CleanupQuotaExceeded" ? 429 : 502,
+          );
+        }
+        return c.json({ proposal: result.value }, 200);
       })
   );
 };
