@@ -22,6 +22,10 @@ nowwaths は、キー入力や音声入力でタスクを手軽に登録し、�
 
 ## 必須ルール
 
+### 環境
+
+- Google Cloudのプロジェクトは、dev/prod 共に `pj-takashi-kayukawa-418609` を指定する。その他のプロジェクトは絶対に使用しない。
+
 ### Terraform 操作
 
 - **Terraform は必ず Makefile 経由で操作する**（`make tf-plan STAGE=dev` 等)。`terraform` コマンドの直接実行は、backend-config や -var の指定漏れを招くため禁止。
